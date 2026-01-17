@@ -11,37 +11,45 @@ This document defines the technology choices for the Agent Cloud Execution Monit
 | Category | Choice | Status | Notes |
 |----------|--------|--------|-------|
 | Language | TypeScript (strict, no JS) | ✅ | |
-| Framework | Next.js 14+ (App Router) | ⏳ | May adjust based on reference project |
-| Styling | Tailwind CSS v4 | ⏳ | |
-| Components | shadcn/ui | ❓ | Evaluate: Radix, Headless UI, custom |
-| Charts | Recharts | ❓ | Evaluate: Tremor, ECharts, Nivo |
-| Tables | TanStack Table | ❓ | Evaluate: AG Grid (overkill?), custom |
-| Data fetching | TanStack Query (React Query) | ❓ | Evaluate: SWR, native fetch |
-| Forms | React Hook Form + Zod | ❓ | For filters, settings |
-| Icons | Lucide React | ❓ | |
-| Date handling | date-fns | ❓ | Lightweight, tree-shakeable |
+| Framework | Next.js 16+ (App Router) | ✅ | Based on next-shadcn-admin-dashboard |
+| Styling | Tailwind CSS v4 | ✅ | v4.1.18 |
+| Components | shadcn/ui | ✅ | Copy-paste pattern, Radix primitives |
+| Charts | Recharts | ✅ | v2.15.4, included in reference project |
+| Tables | TanStack Table | ✅ | v8.21.3, headless, TypeScript-first |
+| Data fetching | SSR first | ✅ | TanStack Query if needed later |
+| Forms | React Hook Form + Zod | ✅ | v7.71.1 + v3.25.76 (if needed) |
+| Icons | Lucide React | ✅ | v0.562.0 |
+| Date handling | date-fns | ✅ | v3.6.0 |
+| Linter/Formatter | Biome.js | ✅ | v2.3.8, replaces ESLint + Prettier |
+| Package manager | pnpm | ✅ | |
 
-### Frontend Structure (proposed)
+### Frontend Structure (actual)
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── (dashboard)/        # Dashboard route group
-│   │   ├── overview/       # Org overview page
-│   │   ├── sessions/       # Sessions list
-│   │   └── sessions/[id]/  # Session detail
-│   ├── global/             # Global overview (SUPER_ADMIN)
-│   └── api/                # API routes
+│   ├── (main)/             # Main route group
+│   │   ├── dashboard/      # Dashboard pages
+│   │   │   ├── default/    # Default dashboard
+│   │   │   ├── crm/        # CRM dashboard
+│   │   │   └── finance/    # Finance dashboard
+│   │   ├── auth/           # Auth pages
+│   │   └── unauthorized/   # Unauthorized page
+│   └── (external)/         # External pages
 ├── components/
 │   ├── ui/                 # Base components (shadcn)
-│   ├── charts/             # Chart wrappers
-│   ├── tables/             # Table components
-│   └── layout/             # Shell, nav, header
+│   ├── data-table/         # Data table components
+│   └── simple-icon.tsx     # Simple icons component
 ├── lib/
-│   ├── auth/               # Auth context, JWT utils
-│   ├── api/                # API client, hooks
-│   └── utils/              # Helpers
-├── types/                  # Domain types
-└── mocks/                  # Mock data, dev auth
+│   ├── fonts/              # Font registry
+│   ├── preferences/        # Theme/layout preferences
+│   └── utils.ts            # Helpers
+├── stores/                 # Zustand stores
+├── hooks/                  # Custom hooks
+├── data/                   # Static data
+├── config/                 # App config
+├── navigation/             # Navigation config
+├── server/                 # Server actions
+└── scripts/                # Boot scripts
 ```
 
 ---
@@ -72,10 +80,10 @@ src/
 |----------|--------|--------|-------|
 | Containerization | Docker | ✅ | |
 | Orchestration | Docker Compose | ✅ | Local dev/demo only for V1 |
-| Node version | 20 LTS | ⏳ | |
-| Package manager | pnpm | ❓ | Evaluate: npm, bun |
-| Linting | ESLint + Prettier | ✅ | |
-| Pre-commit | Husky + lint-staged | ❓ | |
+| Node version | 24.x | ✅ | v24.12.0 |
+| Package manager | pnpm | ✅ | |
+| Linting | Biome.js | ✅ | Single tool for lint + format |
+| Pre-commit | None | ✅ | Removed Husky |
 | CI/CD | GitHub Actions | ❓ | Basic lint/build/test |
 
 ### Docker Compose Services (V1)
@@ -94,21 +102,21 @@ services:
 |----------|--------|--------|-------|
 | IDE | VS Code | ⏳ | With recommended extensions |
 | API testing | Bruno / Insomnia | ❓ | Or built-in dev tools |
-| Mock data | MSW (Mock Service Worker) | ❓ | Or simple JSON fixtures |
+| Mock data | JSON fixtures | ✅ | Simple approach for V1 |
 
 ---
 
-## Reference Projects to Evaluate
+## Reference Project
 
-Before finalizing, evaluate these open-source dashboards for patterns:
+**Base:** [arhamkhnz/next-shadcn-admin-dashboard](https://github.com/arhamkhnz/next-shadcn-admin-dashboard)
 
-| Project | Why evaluate |
-|---------|--------------|
-| [Tremor](https://tremor.so) | Dashboard components, charts built on Tailwind |
-| [shadcn/ui](https://ui.shadcn.com) | Accessible components, copy-paste pattern |
-| [Cal.com](https://github.com/calcom/cal.com) | Next.js 14, production patterns |
-| [Plausible](https://github.com/plausible/analytics) | Analytics dashboard reference |
-| [Vercel Dashboard](https://vercel.com/dashboard) | UX inspiration (proprietary) |
+**Customizations applied:**
+- Removed theme presets (single default theme)
+- Removed font selector (Inter only)
+- Removed navbar sticky toggle (always sticky)
+- Removed sidebar collapse style selector (icon mode only)
+- Removed Husky pre-commit hooks
+- Removed CONTRIBUTING.md, media/
 
 ---
 
@@ -118,21 +126,13 @@ Before finalizing, evaluate these open-source dashboards for patterns:
 |------|----------|-----------|
 | 2026-01-17 | TypeScript only | Team preference, type safety |
 | 2026-01-17 | Next.js preferred | SSR capability, single codebase |
-| 2026-01-17 | Tailwind v4 preferred | Rapid styling, consistent design |
+| 2026-01-17 | Tailwind v4 | Rapid styling, consistent design |
 | 2026-01-17 | Custom JWT auth | Full control, simple dev experience |
 | 2026-01-17 | Docker Compose for V1 | Local deployment focus |
-
----
-
-## Open Decisions (Phase 2)
-
-Priority decisions to make before implementation:
-
-1. **Charts library** - Build a sample chart with top 2 options
-2. **Component library** - Test shadcn/ui integration with Tailwind v4
-3. **Data fetching** - Decide React Query vs SWR
-4. **Database** - PostgreSQL vs SQLite for V1 simplicity
-5. **Reference project** - Pick one to use as structural inspiration
+| 2026-01-17 | next-shadcn-admin-dashboard as base | Comprehensive shadcn setup, Tailwind v4, Recharts |
+| 2026-01-17 | Biome.js | Single tool for lint + format, faster than ESLint |
+| 2026-01-17 | SSR-first data fetching | KISS - add TanStack Query only if needed |
+| 2026-01-17 | No Husky | Simpler workflow, manual lint before commit |
 
 ---
 

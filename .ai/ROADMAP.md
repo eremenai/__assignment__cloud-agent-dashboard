@@ -40,27 +40,36 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 
 ---
 
-## Phase 2: Technology Selection
+## Phase 2: Technology Selection ✅
 **Goal:** Finalize frontend stack and identify reference implementations.
 
-**Reference:** `.ai/TECH_STACK.md` (created with initial preferences)
+**Reference:** `.ai/TECH_STACK.md`
 
 **Tasks:**
-- [ ] Research existing analytics dashboard projects (open source)
-- [ ] Evaluate charting libraries (build sample with top 2 options)
-- [ ] Evaluate component libraries (test shadcn/ui + Tailwind v4 compatibility)
-- [ ] Finalize decisions in `.ai/TECH_STACK.md`
+- [x] Research existing analytics dashboard projects (open source)
+- [x] Evaluate charting libraries → Recharts (included in reference project)
+- [x] Evaluate component libraries → shadcn/ui + Tailwind v4 works
+- [x] Finalize decisions in `.ai/TECH_STACK.md`
 
-**Open decisions:** (see TECH_STACK.md for full matrix)
-| Decision | Leading options | Status |
-|----------|-----------------|--------|
-| Charts | Recharts, Tremor | TBD |
-| Components | shadcn/ui | TBD |
-| Data fetching | TanStack Query, SWR | TBD |
-| Tables | TanStack Table | TBD |
-| Database | PostgreSQL, SQLite | TBD |
+**Decisions made:**
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Base project | next-shadcn-admin-dashboard | Comprehensive setup, Tailwind v4, Recharts |
+| Charts | Recharts v2.15.4 | Already integrated, flexible |
+| Components | shadcn/ui | Copy-paste, Radix primitives |
+| Data fetching | SSR first | KISS, add TanStack Query if needed |
+| Tables | TanStack Table v8.21.3 | Headless, TypeScript-first |
+| Linter/Formatter | Biome.js | Single tool, fast |
 
-**Exit criteria:** All ❓ items in TECH_STACK.md changed to ✅.
+**Customizations applied to base project:**
+- Removed theme presets (single default theme)
+- Removed font selector (Inter only)
+- Removed navbar sticky toggle (always sticky)
+- Removed sidebar collapse style selector (icon mode only)
+- Removed Husky pre-commit hooks
+- Removed CONTRIBUTING.md, media/
+
+**Exit criteria:** All frontend ❓ items in TECH_STACK.md changed to ✅.
 
 ---
 
@@ -70,10 +79,10 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 **Milestones:**
 
 ### 3.1 Project Setup
-- [ ] Initialize Next.js project with TypeScript
-- [ ] Configure Tailwind CSS v4
-- [ ] Set up project structure (components, pages, lib, types)
-- [ ] Configure ESLint, Prettier
+- [x] Initialize Next.js project with TypeScript (via reference project)
+- [x] Configure Tailwind CSS v4 (via reference project)
+- [x] Set up project structure (via reference project)
+- [x] Configure Biome.js (replaces ESLint + Prettier)
 
 ### 3.2 Auth & Context
 - [ ] JWT validation middleware (mock issuer in dev)
