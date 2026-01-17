@@ -20,15 +20,25 @@ The system provides a chat-like UI where users submit a prompt to run a cloud co
 Reference behavior (conceptual): Claude Code on the web describes cloud execution, pushing a branch, and “teleporting” a session/branch to local CLI. Teleport fetches and checks out the remote branch and loads conversation history. (We use this as a conceptual model for “Local handoff”.)
 
 ## Users and roles
-- **Org Admin / Manager**: needs org-level overview (adoption, spend, reliability trends), and drill-down by user/session.
-- **Individual Engineer**: needs personal/team visibility and session/run drill-down for troubleshooting and iteration.
+
+### Organization-Level Roles (scoped to single org)
+- **Org Admin**: full read access to org data, manage org settings
+- **Manager**: read access to org data, team-level views
+- **Member**: read access to own data + team aggregates
+
+### Platform-Level Roles (cross-org)
+- **Support**: can view any org via selector (to assist org admins)
+- **Super Admin**: all orgs + global aggregate view
+
+See `.ai/AUTH_AND_ROLES.md` for detailed permission matrix and UI behavior.
 
 ## Core objects (domain model)
 ### Organization
 - `orgId`, `name`
 
 ### User
-- `userId`, `orgId`, `email`, `role` (admin/manager/member)
+- `userId`, `orgId` (null for platform roles), `email`
+- `role`: `MEMBER | MANAGER | ORG_ADMIN | SUPPORT | SUPER_ADMIN`
 
 ### Session
 A persistent chat-like thread bound to a repo/workspace context.
@@ -106,7 +116,8 @@ These are the core “quality / friction” proxies in this product model.
 - Interpretation: proxy for “handoff exposed issues or required more work”.
 
 Notes:
-- Because session threads persist indefinitely, metrics are computed over a **selected time range** and can use a rolling inactivity rule (e.g., treat “session activity window” as messages/runs within the last N days).
+- Because session threads persist indefinitely, metrics are computed over a **selected time range** and can use a rolling inactivity rule (e.g., treat "session activity window" as messages/runs within the last N days).
+- **Data retention**: 1 year of historical data available for queries.
 
 ## Dashboard information architecture (V1)
 ### 1) Org Overview
@@ -148,3 +159,8 @@ Goal: explain *why* a session needed multiple runs or handoff.
 ## References (conceptual inspiration)
 - Claude Code on the web (teleport, cloud execution lifecycle): https://code.claude.com/docs/en/claude-code-on-the-web
 - Zencoder Analytics dashboard components (metric card + trends + member table patterns): https://docs.zencoder.ai/features/analytics
+
+## Related Documents
+- `.ai/ROADMAP.md` - Implementation phases and milestones
+- `.ai/TECH_STACK.md` - Technology choices (frontend, backend, devops)
+- `.ai/AUTH_AND_ROLES.md` - Authentication and authorization model
