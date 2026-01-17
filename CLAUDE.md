@@ -19,6 +19,7 @@ If `/.ai/` is missing, proceed using this file and the repo’s existing docs, b
 call out that `/.ai/` was not found.
 
 ## 1) North Star
+- **KISS (Keep It Simple, Stupid)**: Always choose the simplest solution that works. Avoid over-engineering, premature abstraction, and unnecessary complexity.
 - Optimize for: correctness, maintainability, clarity, and long-term velocity.
 - Prefer deletion over accumulation.
 - Keep the repo consistently shippable: main branch should pass tests and lint.
