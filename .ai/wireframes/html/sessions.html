@@ -37,6 +37,19 @@
           </a>
         </div>
       </nav>
+      <!-- Dev Mode Switcher -->
+      <div class="sidebar-footer">
+        <div class="role-switcher">
+          <span class="role-switcher-label">Dev Mode</span>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice (MEMBER)</option>
+            <option value="manager">Bob (MANAGER)</option>
+            <option value="admin" selected>Carol (ORG_ADMIN)</option>
+            <option value="support">Eve (SUPPORT)</option>
+            <option value="super">Frank (SUPER_ADMIN)</option>
+          </select>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -70,18 +83,6 @@
       </header>
 
       <div class="main-content">
-        <!-- Role Switcher (Dev Mode) -->
-        <div class="role-switcher">
-          <label>Dev Mode - Switch User:</label>
-          <select id="role-select" onchange="switchRole(this.value)">
-            <option value="member">Alice Member (MEMBER)</option>
-            <option value="manager">Bob Manager (MANAGER)</option>
-            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
-            <option value="support">Eve Support (SUPPORT)</option>
-            <option value="super">Frank Super (SUPER_ADMIN)</option>
-          </select>
-        </div>
-
         <!-- Page Header -->
         <div class="page-header">
           <h1 class="page-title">Sessions</h1>
@@ -153,20 +154,55 @@
                 <th>Session ID</th>
                 <th class="created-by-col">Created By</th>
                 <th class="sortable">Started ↓</th>
-                <th class="sortable">Lifespan</th>
-                <th class="sortable">Active Time</th>
-                <th class="sortable">Runs</th>
-                <th class="sortable">Handoffs</th>
-                <th>Post-H</th>
-                <th class="sortable">Success</th>
-                <th class="sortable text-right">Cost</th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Lifespan
+                    <span class="metric-info">?<span class="metric-tooltip">Time between first and last message in the session.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Active Time
+                    <span class="metric-info">?<span class="metric-tooltip">Total agent execution time (sum of run durations).</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Runs
+                    <span class="metric-info">?<span class="metric-tooltip">Number of agent execution attempts in this session.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Handoffs
+                    <span class="metric-info">?<span class="metric-tooltip">Number of local handoff events where agent returned control.</span></span>
+                  </span>
+                </th>
+                <th>
+                  <span class="th-with-info">
+                    Post-H
+                    <span class="metric-info">?<span class="metric-tooltip">Whether any runs occurred after handoff, indicating more iteration was needed.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Success
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of runs that completed successfully.</span></span>
+                  </span>
+                </th>
+                <th class="sortable text-right">
+                  <span class="th-with-info">
+                    Cost
+                    <span class="metric-info">?<span class="metric-tooltip">Total API cost for all runs in this session.</span></span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#abc123def</td>
-                <td class="created-by-col">alice@acme.com</td>
+                <td class="created-by-col">Alice Member</td>
                 <td>Jan 15, 2:34 PM</td>
                 <td>45m</td>
                 <td>12m 5s</td>
@@ -179,7 +215,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#def456ghi</td>
-                <td class="created-by-col">bob@acme.com</td>
+                <td class="created-by-col">Bob Manager</td>
                 <td>Jan 15, 10:15 AM</td>
                 <td>1h 15m</td>
                 <td>28m</td>
@@ -192,7 +228,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#ghi789jkl</td>
-                <td class="created-by-col">alice@acme.com</td>
+                <td class="created-by-col">Alice Member</td>
                 <td>Jan 14, 4:22 PM</td>
                 <td>18m</td>
                 <td>4m 32s</td>
@@ -205,7 +241,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#jkl012mno</td>
-                <td class="created-by-col">carol@acme.com</td>
+                <td class="created-by-col">Carol Admin</td>
                 <td>Jan 14, 2:10 PM</td>
                 <td>35m</td>
                 <td>8m 15s</td>
@@ -218,7 +254,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#mno345pqr</td>
-                <td class="created-by-col">bob@acme.com</td>
+                <td class="created-by-col">Bob Manager</td>
                 <td>Jan 13, 11:45 AM</td>
                 <td>22m</td>
                 <td>5m 45s</td>
@@ -231,7 +267,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#pqr678stu</td>
-                <td class="created-by-col">dan@acme.com</td>
+                <td class="created-by-col">Dan Developer</td>
                 <td>Jan 13, 9:30 AM</td>
                 <td>55m</td>
                 <td>15m 20s</td>
@@ -244,7 +280,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#stu901vwx</td>
-                <td class="created-by-col">alice@acme.com</td>
+                <td class="created-by-col">Alice Member</td>
                 <td>Jan 12, 3:15 PM</td>
                 <td>12m</td>
                 <td>3m 10s</td>
@@ -257,7 +293,7 @@
               <tr class="clickable" onclick="location.href='session-detail.html'">
                 <td><input type="checkbox"></td>
                 <td class="font-mono">#vwx234yza</td>
-                <td class="created-by-col">carol@acme.com</td>
+                <td class="created-by-col">Carol Admin</td>
                 <td>Jan 12, 11:00 AM</td>
                 <td>28m</td>
                 <td>6m 45s</td>

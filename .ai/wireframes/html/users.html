@@ -37,6 +37,19 @@
           </a>
         </div>
       </nav>
+      <!-- Dev Mode Switcher -->
+      <div class="sidebar-footer">
+        <div class="role-switcher">
+          <span class="role-switcher-label">Dev Mode</span>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice (MEMBER)</option>
+            <option value="manager">Bob (MANAGER)</option>
+            <option value="admin" selected>Carol (ORG_ADMIN)</option>
+            <option value="support">Eve (SUPPORT)</option>
+            <option value="super">Frank (SUPER_ADMIN)</option>
+          </select>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -70,18 +83,6 @@
       </header>
 
       <div class="main-content">
-        <!-- Role Switcher (Dev Mode) -->
-        <div class="role-switcher">
-          <label>Dev Mode - Switch User:</label>
-          <select id="role-select" onchange="switchRole(this.value)">
-            <option value="member">Alice Member (MEMBER)</option>
-            <option value="manager">Bob Manager (MANAGER)</option>
-            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
-            <option value="support">Eve Support (SUPPORT)</option>
-            <option value="super">Frank Super (SUPER_ADMIN)</option>
-          </select>
-        </div>
-
         <!-- Page Header -->
         <div class="page-header">
           <h1 class="page-title">Users</h1>
@@ -121,14 +122,54 @@
                 <th>Role</th>
                 <th class="sortable">Sessions</th>
                 <th class="sortable">Runs</th>
-                <th class="sortable">Runs/Sess</th>
-                <th class="sortable">Avg Active</th>
-                <th class="sortable">Avg Lifespan</th>
-                <th class="sortable">Handoff %</th>
-                <th class="sortable">Post-H %</th>
-                <th class="sortable">Success</th>
-                <th class="sortable text-right">Cost</th>
-                <th class="sortable text-right">Cost/Run</th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Runs/Sess
+                    <span class="metric-info">?<span class="metric-tooltip">Average runs per session. Higher values may indicate iteration.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Avg Active
+                    <span class="metric-info">?<span class="metric-tooltip">Average agent execution time per session.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Avg Lifespan
+                    <span class="metric-info">?<span class="metric-tooltip">Average session duration (first to last message).</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Handoff %
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of sessions with local handoff events.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Post-H %
+                    <span class="metric-info">?<span class="metric-tooltip">Sessions with runs after handoff, indicating more work needed.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Success
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of runs that completed successfully.</span></span>
+                  </span>
+                </th>
+                <th class="sortable text-right">
+                  <span class="th-with-info">
+                    Cost
+                    <span class="metric-info">?<span class="metric-tooltip">Total API cost for all runs by this user.</span></span>
+                  </span>
+                </th>
+                <th class="sortable text-right">
+                  <span class="th-with-info">
+                    Cost/Run
+                    <span class="metric-info">?<span class="metric-tooltip">Average cost per run for this user.</span></span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>

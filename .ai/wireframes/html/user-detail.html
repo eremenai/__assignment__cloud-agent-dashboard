@@ -37,6 +37,19 @@
           </a>
         </div>
       </nav>
+      <!-- Dev Mode Switcher -->
+      <div class="sidebar-footer">
+        <div class="role-switcher">
+          <span class="role-switcher-label">Dev Mode</span>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice (MEMBER)</option>
+            <option value="manager">Bob (MANAGER)</option>
+            <option value="admin" selected>Carol (ORG_ADMIN)</option>
+            <option value="support">Eve (SUPPORT)</option>
+            <option value="super">Frank (SUPER_ADMIN)</option>
+          </select>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -47,7 +60,7 @@
           <nav class="breadcrumb">
             <a href="users.html">Users</a>
             <span class="separator">›</span>
-            <span class="current">alice@acme.com</span>
+            <span class="current">Alice Member</span>
           </nav>
         </div>
         <div class="header-right">
@@ -72,18 +85,6 @@
       </header>
 
       <div class="main-content">
-        <!-- Role Switcher (Dev Mode) -->
-        <div class="role-switcher">
-          <label>Dev Mode - Switch User:</label>
-          <select id="role-select" onchange="switchRole(this.value)">
-            <option value="member">Alice Member (MEMBER)</option>
-            <option value="manager">Bob Manager (MANAGER)</option>
-            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
-            <option value="support">Eve Support (SUPPORT)</option>
-            <option value="super">Frank Super (SUPER_ADMIN)</option>
-          </select>
-        </div>
-
         <!-- User Header -->
         <div class="user-header-card">
           <div class="user-header-avatar">AM</div>
@@ -103,42 +104,69 @@
         <!-- KPI Row -->
         <div class="kpi-row">
           <div class="kpi-card">
-            <div class="kpi-label">Sessions</div>
+            <div class="kpi-label">
+              Sessions
+              <span class="metric-info">?<span class="metric-tooltip">Number of sessions started by this user in the selected period.</span></span>
+            </div>
             <div class="kpi-value">12</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Runs</div>
+            <div class="kpi-label">
+              Runs
+              <span class="metric-info">?<span class="metric-tooltip">Total agent execution attempts by this user.</span></span>
+            </div>
             <div class="kpi-value">28</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Avg Runs/Session</div>
+            <div class="kpi-label">
+              Avg Runs/Session
+              <span class="metric-info">?<span class="metric-tooltip">Average runs per session for this user. Higher may indicate more iteration.</span></span>
+            </div>
             <div class="kpi-value">2.3</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Avg Active Time</div>
+            <div class="kpi-label">
+              Avg Active Time
+              <span class="metric-info">?<span class="metric-tooltip">Average agent execution time per session for this user.</span></span>
+            </div>
             <div class="kpi-value">4h 32m</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Avg Lifespan</div>
+            <div class="kpi-label">
+              Avg Lifespan
+              <span class="metric-info">?<span class="metric-tooltip">Average session duration (first to last message) for this user.</span></span>
+            </div>
             <div class="kpi-value">18m</div>
           </div>
         </div>
 
         <div class="kpi-row">
           <div class="kpi-card">
-            <div class="kpi-label">Handoff Rate</div>
+            <div class="kpi-label">
+              Handoff Rate
+              <span class="metric-info">?<span class="metric-tooltip">Percentage of this user's sessions with local handoff events.</span></span>
+            </div>
             <div class="kpi-value">25%</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Post-Handoff Iter.</div>
+            <div class="kpi-label">
+              Post-Handoff Iter.
+              <span class="metric-info">?<span class="metric-tooltip">Sessions with runs after handoff, indicating more work was needed.</span></span>
+            </div>
             <div class="kpi-value">8%</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Success Rate</div>
+            <div class="kpi-label">
+              Success Rate
+              <span class="metric-info">?<span class="metric-tooltip">Percentage of this user's runs that completed successfully.</span></span>
+            </div>
             <div class="kpi-value">92%</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Total Cost</div>
+            <div class="kpi-label">
+              Total Cost
+              <span class="metric-info">?<span class="metric-tooltip">Sum of all run costs for this user in the selected period.</span></span>
+            </div>
             <div class="kpi-value">$156.78</div>
           </div>
         </div>
@@ -147,7 +175,14 @@
         <div class="charts-row">
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Activity Over Time</span>
+              <span class="chart-title">
+                Activity Over Time
+                <span class="metric-info">?<span class="metric-tooltip">User's runs and sessions plotted over the selected time period.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Runs</button>
+                <button class="chart-toggle-btn">Sessions</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Dual-line chart: Runs + Sessions over time]
@@ -155,11 +190,14 @@
           </div>
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Cost Over Time</span>
-              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
-                <option>Daily</option>
-                <option>Cumulative</option>
-              </select>
+              <span class="chart-title">
+                Cost Over Time
+                <span class="metric-info">?<span class="metric-tooltip">User's API costs plotted over the selected time period.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Daily</button>
+                <button class="chart-toggle-btn">Cumulative</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Line chart: Cost over time]
@@ -170,7 +208,14 @@
         <div class="charts-row" style="grid-template-columns: 1fr;">
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Friction Over Time</span>
+              <span class="chart-title">
+                Friction Over Time
+                <span class="metric-info">?<span class="metric-tooltip">Indicators of user friction: runs per session and handoff rate over time.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Runs/Session</button>
+                <button class="chart-toggle-btn">Handoff Rate</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Dual-line chart: Runs/Session + Handoff Rate over time]
@@ -188,17 +233,52 @@
               <tr>
                 <th>Session ID</th>
                 <th class="sortable">Started ↓</th>
-                <th class="sortable">Lifespan</th>
-                <th class="sortable">Active Time</th>
-                <th class="sortable">Runs</th>
-                <th class="sortable">Handoffs</th>
-                <th>Post-H</th>
-                <th class="sortable">Success</th>
-                <th class="sortable text-right">Cost</th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Lifespan
+                    <span class="metric-info">?<span class="metric-tooltip">Time between first and last message in the session.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Active Time
+                    <span class="metric-info">?<span class="metric-tooltip">Total agent execution time (sum of run durations).</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Runs
+                    <span class="metric-info">?<span class="metric-tooltip">Number of agent execution attempts.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Handoffs
+                    <span class="metric-info">?<span class="metric-tooltip">Local handoff events where agent returned control.</span></span>
+                  </span>
+                </th>
+                <th>
+                  <span class="th-with-info">
+                    Post-H
+                    <span class="metric-info">?<span class="metric-tooltip">Whether runs occurred after handoff.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Success
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of runs that completed successfully.</span></span>
+                  </span>
+                </th>
+                <th class="sortable text-right">
+                  <span class="th-with-info">
+                    Cost
+                    <span class="metric-info">?<span class="metric-tooltip">Total API cost for all runs in this session.</span></span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr class="clickable" onclick="location.href='session-detail.html'">
+              <tr class="clickable" onclick="location.href='session-detail.html?from_user=Alice Member'">
                 <td class="font-mono">#abc123def</td>
                 <td>Jan 15, 2:34 PM</td>
                 <td>45m</td>
@@ -209,7 +289,7 @@
                 <td>75%</td>
                 <td class="text-right font-bold">$34.56</td>
               </tr>
-              <tr class="clickable" onclick="location.href='session-detail.html'">
+              <tr class="clickable" onclick="location.href='session-detail.html?from_user=Alice Member'">
                 <td class="font-mono">#ghi789jkl</td>
                 <td>Jan 14, 4:22 PM</td>
                 <td>18m</td>
@@ -220,7 +300,7 @@
                 <td>100%</td>
                 <td class="text-right font-bold">$12.34</td>
               </tr>
-              <tr class="clickable" onclick="location.href='session-detail.html'">
+              <tr class="clickable" onclick="location.href='session-detail.html?from_user=Alice Member'">
                 <td class="font-mono">#stu901vwx</td>
                 <td>Jan 12, 3:15 PM</td>
                 <td>12m</td>
@@ -231,7 +311,7 @@
                 <td>100%</td>
                 <td class="text-right font-bold">$6.78</td>
               </tr>
-              <tr class="clickable" onclick="location.href='session-detail.html'">
+              <tr class="clickable" onclick="location.href='session-detail.html?from_user=Alice Member'">
                 <td class="font-mono">#xyz567abc</td>
                 <td>Jan 11, 10:45 AM</td>
                 <td>25m</td>
@@ -242,7 +322,7 @@
                 <td>100%</td>
                 <td class="text-right font-bold">$9.12</td>
               </tr>
-              <tr class="clickable" onclick="location.href='session-detail.html'">
+              <tr class="clickable" onclick="location.href='session-detail.html?from_user=Alice Member'">
                 <td class="font-mono">#def234ghi</td>
                 <td>Jan 10, 2:00 PM</td>
                 <td>35m</td>
@@ -253,7 +333,7 @@
                 <td>80%</td>
                 <td class="text-right font-bold">$15.67</td>
               </tr>
-              <tr class="clickable" onclick="location.href='session-detail.html'">
+              <tr class="clickable" onclick="location.href='session-detail.html?from_user=Alice Member'">
                 <td class="font-mono">#jkl890mno</td>
                 <td>Jan 9, 11:30 AM</td>
                 <td>15m</td>

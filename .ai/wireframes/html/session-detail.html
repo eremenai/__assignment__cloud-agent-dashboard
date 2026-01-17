@@ -37,6 +37,19 @@
           </a>
         </div>
       </nav>
+      <!-- Dev Mode Switcher -->
+      <div class="sidebar-footer">
+        <div class="role-switcher">
+          <span class="role-switcher-label">Dev Mode</span>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice (MEMBER)</option>
+            <option value="manager">Bob (MANAGER)</option>
+            <option value="admin" selected>Carol (ORG_ADMIN)</option>
+            <option value="support">Eve (SUPPORT)</option>
+            <option value="super">Frank (SUPER_ADMIN)</option>
+          </select>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -44,11 +57,14 @@
       <!-- Header -->
       <header class="header">
         <div class="header-left">
-          <nav class="breadcrumb">
+          <nav class="breadcrumb" id="breadcrumb">
+            <!-- Default: from Sessions list -->
             <a href="sessions.html">Sessions</a>
             <span class="separator">›</span>
             <span class="current">#abc123def</span>
           </nav>
+          <!-- Alternate breadcrumb when navigating from User Detail -->
+          <!-- Users › Alice Member › Sessions › #abc123def -->
         </div>
         <div class="header-right">
           <div class="dropdown org-selector-wrapper" style="display: none;">
@@ -72,54 +88,148 @@
       </header>
 
       <div class="main-content">
-        <!-- Role Switcher (Dev Mode) -->
-        <div class="role-switcher">
-          <label>Dev Mode - Switch User:</label>
-          <select id="role-select" onchange="switchRole(this.value)">
-            <option value="member">Alice Member (MEMBER)</option>
-            <option value="manager">Bob Manager (MANAGER)</option>
-            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
-            <option value="support">Eve Support (SUPPORT)</option>
-            <option value="super">Frank Super (SUPER_ADMIN)</option>
-          </select>
-        </div>
-
         <!-- Session Header -->
         <div class="session-header-card">
           <div class="session-header-top">
             <div>
               <div class="session-id">Session #abc123def</div>
               <div class="session-meta">
-                Created by: alice@acme.com • Started: Jan 15, 2024 at 2:34 PM
+                Created by: Alice Member • Started: Jan 15, 2024 at 2:34 PM
               </div>
             </div>
             <span class="badge badge-warning">Post-Handoff Iteration</span>
           </div>
           <div class="kpi-row" style="margin-bottom: 0;">
             <div class="kpi-card">
-              <div class="kpi-label">Lifespan</div>
+              <div class="kpi-label">
+                Lifespan
+                <span class="metric-info">?<span class="metric-tooltip">Time between first and last message in this session.</span></span>
+              </div>
               <div class="kpi-value">45m</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-label">Active Time</div>
+              <div class="kpi-label">
+                Active Time
+                <span class="metric-info">?<span class="metric-tooltip">Total time spent executing runs (sum of all run durations).</span></span>
+              </div>
               <div class="kpi-value">12m 5s</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-label">Runs</div>
+              <div class="kpi-label">
+                Runs
+                <span class="metric-info">?<span class="metric-tooltip">Number of agent execution attempts in this session.</span></span>
+              </div>
               <div class="kpi-value">4</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-label">Local Handoffs</div>
+              <div class="kpi-label">
+                Local Handoffs
+                <span class="metric-info">?<span class="metric-tooltip">Times the user exported session results locally (teleport, CLI, etc).</span></span>
+              </div>
               <div class="kpi-value">2</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-label">Success Rate</div>
+              <div class="kpi-label">
+                Success Rate
+                <span class="metric-info">?<span class="metric-tooltip">Percentage of runs in this session that completed successfully.</span></span>
+              </div>
               <div class="kpi-value">75%</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-label">Total Cost</div>
+              <div class="kpi-label">
+                Total Cost
+                <span class="metric-info">?<span class="metric-tooltip">Sum of all run costs in this session.</span></span>
+              </div>
               <div class="kpi-value">$12.34</div>
             </div>
+          </div>
+        </div>
+
+        <!-- Visual Timeline Bar -->
+        <div class="visual-timeline-card">
+          <div class="visual-timeline-header">
+            <span class="visual-timeline-title">Session Timeline</span>
+            <span class="visual-timeline-range">2:34 PM - 3:28 PM (54 min)</span>
+          </div>
+          <div class="visual-timeline-container">
+            <div class="visual-timeline-axis">
+              <span class="axis-label start">2:34 PM</span>
+              <span class="axis-label end">3:28 PM</span>
+            </div>
+            <div class="visual-timeline-bar" id="timeline-bar">
+              <!-- Run #1: 2:34-2:38 (4min) - success -->
+              <div class="timeline-segment run-success"
+                   data-event="run-1"
+                   style="left: 0%; width: 7.4%;"
+                   onmouseenter="showTooltip(event, 'Run #1', 'SUCCESS', '2:34 - 2:38 PM', '4m 12s', '$2.34')"
+                   onmouseleave="hideTooltip()"
+                   onclick="scrollToEvent('event-run-1-end')">
+              </div>
+              <!-- Idle: 2:38-2:45 (7min) -->
+              <div class="timeline-segment idle"
+                   style="left: 7.4%; width: 13%;"
+                   onmouseenter="showTooltip(event, 'Idle', null, '2:38 - 2:45 PM', '7m', null)"
+                   onmouseleave="hideTooltip()">
+              </div>
+              <!-- Run #2: 2:45-2:52 (7min) - failed -->
+              <div class="timeline-segment run-failed"
+                   data-event="run-2"
+                   style="left: 20.4%; width: 13%;"
+                   onmouseenter="showTooltip(event, 'Run #2', 'FAILED (TIMEOUT)', '2:45 - 2:52 PM', '7m 3s', '$3.12')"
+                   onmouseleave="hideTooltip()"
+                   onclick="scrollToEvent('event-run-2-end')">
+              </div>
+              <!-- Idle: 2:52-3:00 (8min) -->
+              <div class="timeline-segment idle"
+                   style="left: 33.4%; width: 14.8%;"
+                   onmouseenter="showTooltip(event, 'Idle', null, '2:52 - 3:00 PM', '8m', null)"
+                   onmouseleave="hideTooltip()">
+              </div>
+              <!-- Handoff: 3:00 -->
+              <div class="timeline-segment handoff"
+                   data-event="handoff-1"
+                   style="left: 48.2%; width: 2%;"
+                   onmouseenter="showTooltip(event, 'Local Handoff', 'TELEPORT', '3:00 PM', null, null)"
+                   onmouseleave="hideTooltip()"
+                   onclick="scrollToEvent('event-handoff-1')">
+              </div>
+              <!-- Idle: 3:00-3:15 (15min) -->
+              <div class="timeline-segment idle"
+                   style="left: 50.2%; width: 27.8%;"
+                   onmouseenter="showTooltip(event, 'Idle (post-handoff)', null, '3:00 - 3:15 PM', '15m', null)"
+                   onmouseleave="hideTooltip()">
+              </div>
+              <!-- Run #3: 3:15-3:19 (4min) - success -->
+              <div class="timeline-segment run-success"
+                   data-event="run-3"
+                   style="left: 78%; width: 7.4%;"
+                   onmouseenter="showTooltip(event, 'Run #3', 'SUCCESS', '3:15 - 3:19 PM', '3m 48s', '$1.89')"
+                   onmouseleave="hideTooltip()"
+                   onclick="scrollToEvent('event-run-3-end')">
+              </div>
+              <!-- Run #4: 3:25-3:28 (3min) - success -->
+              <div class="timeline-segment run-success"
+                   data-event="run-4"
+                   style="left: 94.4%; width: 5.6%;"
+                   onmouseenter="showTooltip(event, 'Run #4', 'SUCCESS', '3:25 - 3:28 PM', '2m 15s', '$1.45')"
+                   onmouseleave="hideTooltip()"
+                   onclick="scrollToEvent('event-run-4-end')">
+              </div>
+            </div>
+            <div class="visual-timeline-legend">
+              <span class="legend-item"><span class="legend-color run-success"></span> Run (success)</span>
+              <span class="legend-item"><span class="legend-color run-failed"></span> Run (failed)</span>
+              <span class="legend-item"><span class="legend-color idle"></span> Idle</span>
+              <span class="legend-item"><span class="legend-color handoff"></span> Handoff</span>
+            </div>
+          </div>
+          <!-- Tooltip -->
+          <div id="timeline-tooltip" class="timeline-tooltip" style="display: none;">
+            <div class="tooltip-title"></div>
+            <div class="tooltip-status"></div>
+            <div class="tooltip-time"></div>
+            <div class="tooltip-duration"></div>
+            <div class="tooltip-cost"></div>
           </div>
         </div>
 
@@ -159,7 +269,7 @@
                 </div>
               </div>
 
-              <div class="timeline-item">
+              <div class="timeline-item" id="event-run-1-end">
                 <div class="timeline-marker success">✓</div>
                 <div class="timeline-content">
                   <div class="timeline-header">
@@ -214,7 +324,7 @@
                 </div>
               </div>
 
-              <div class="timeline-item">
+              <div class="timeline-item" id="event-run-2-end">
                 <div class="timeline-marker error">✗</div>
                 <div class="timeline-content">
                   <div class="timeline-header">
@@ -229,7 +339,7 @@
                 </div>
               </div>
 
-              <div class="timeline-item">
+              <div class="timeline-item" id="event-handoff-1">
                 <div class="timeline-marker handoff">↗</div>
                 <div class="timeline-content">
                   <div class="timeline-header">
@@ -268,7 +378,7 @@
                 </div>
               </div>
 
-              <div class="timeline-item">
+              <div class="timeline-item" id="event-run-3-end">
                 <div class="timeline-marker success">✓</div>
                 <div class="timeline-content">
                   <div class="timeline-header">
@@ -280,6 +390,22 @@
                     <span>Duration: 3m 48s</span>
                     <span>Cost: $1.89</span>
                     <span>Tokens: 32,456</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item" id="event-run-4-end">
+                <div class="timeline-marker success">✓</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">3:28 PM</span>
+                    <span class="timeline-actor" style="color: #155724;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #4 completed <span class="badge badge-success">SUCCESS</span></div>
+                  <div class="timeline-meta">
+                    <span>Duration: 2m 15s</span>
+                    <span>Cost: $1.45</span>
+                    <span>Tokens: 25,023</span>
                   </div>
                 </div>
               </div>
@@ -357,7 +483,10 @@
           <div class="charts-row">
             <div class="chart-card">
               <div class="chart-header">
-                <span class="chart-title">Run Duration Distribution</span>
+                <span class="chart-title">
+                  Run Duration Distribution
+                  <span class="metric-info">?<span class="metric-tooltip">Duration of each run in this session.</span></span>
+                </span>
               </div>
               <div class="chart-placeholder">
                 [Bar chart: Duration per run]
@@ -365,7 +494,10 @@
             </div>
             <div class="chart-card">
               <div class="chart-header">
-                <span class="chart-title">Run Cost Distribution</span>
+                <span class="chart-title">
+                  Run Cost Distribution
+                  <span class="metric-info">?<span class="metric-tooltip">Cost breakdown of each run in this session.</span></span>
+                </span>
               </div>
               <div class="chart-placeholder">
                 [Bar chart: Cost per run]
@@ -487,6 +619,271 @@
     }
 
     switchRole('admin');
+
+    // Contextual Breadcrumbs - check URL params for navigation context
+    function updateBreadcrumbs() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromUser = urlParams.get('from_user');
+      const breadcrumb = document.getElementById('breadcrumb');
+
+      if (fromUser) {
+        // Coming from User Detail page
+        breadcrumb.innerHTML = `
+          <a href="users.html">Users</a>
+          <span class="separator">›</span>
+          <a href="user-detail.html">${fromUser}</a>
+          <span class="separator">›</span>
+          <span>Sessions</span>
+          <span class="separator">›</span>
+          <span class="current">#abc123def</span>
+        `;
+      }
+      // Otherwise keep default (Sessions > #abc123def)
+    }
+    updateBreadcrumbs();
+
+    // Visual Timeline Bar interactions
+    function showTooltip(event, title, status, time, duration, cost) {
+      const tooltip = document.getElementById('timeline-tooltip');
+      const rect = event.target.getBoundingClientRect();
+      const containerRect = document.querySelector('.visual-timeline-container').getBoundingClientRect();
+
+      tooltip.querySelector('.tooltip-title').textContent = title;
+      tooltip.querySelector('.tooltip-status').textContent = status || '';
+      tooltip.querySelector('.tooltip-status').style.display = status ? 'block' : 'none';
+      tooltip.querySelector('.tooltip-time').textContent = time || '';
+      tooltip.querySelector('.tooltip-duration').textContent = duration ? `Duration: ${duration}` : '';
+      tooltip.querySelector('.tooltip-duration').style.display = duration ? 'block' : 'none';
+      tooltip.querySelector('.tooltip-cost').textContent = cost ? `Cost: ${cost}` : '';
+      tooltip.querySelector('.tooltip-cost').style.display = cost ? 'block' : 'none';
+
+      // Position tooltip above the segment
+      let left = rect.left - containerRect.left + (rect.width / 2);
+      tooltip.style.left = left + 'px';
+      tooltip.style.bottom = '60px';
+      tooltip.style.display = 'block';
+
+      // Highlight corresponding segment
+      event.target.classList.add('segment-hover');
+    }
+
+    function hideTooltip() {
+      const tooltip = document.getElementById('timeline-tooltip');
+      tooltip.style.display = 'none';
+      document.querySelectorAll('.timeline-segment').forEach(s => s.classList.remove('segment-hover'));
+    }
+
+    function scrollToEvent(eventId) {
+      const element = document.getElementById(eventId);
+      if (!element) return;
+
+      // Make sure Timeline tab is active
+      showTab('timeline');
+
+      // Wait a tick for tab to render
+      setTimeout(() => {
+        // Scroll to element
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Add highlight class
+        element.classList.add('event-highlight');
+
+        // Remove highlight after 2 seconds
+        setTimeout(() => {
+          element.classList.remove('event-highlight');
+        }, 2000);
+      }, 100);
+    }
   </script>
+
+  <style>
+    /* Visual Timeline Bar Styles */
+    .visual-timeline-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .visual-timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .visual-timeline-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .visual-timeline-range {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .visual-timeline-container {
+      position: relative;
+    }
+
+    .visual-timeline-axis {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .axis-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .visual-timeline-bar {
+      position: relative;
+      height: 32px;
+      background: var(--bg-primary);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .timeline-segment {
+      position: absolute;
+      top: 4px;
+      height: 24px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .timeline-segment:hover,
+    .timeline-segment.segment-hover {
+      transform: scaleY(1.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+
+    .timeline-segment.run-success {
+      background: #28a745;
+    }
+
+    .timeline-segment.run-failed {
+      background: #dc3545;
+    }
+
+    .timeline-segment.run-timeout {
+      background: #fd7e14;
+    }
+
+    .timeline-segment.idle {
+      background: #e9ecef;
+      cursor: default;
+    }
+
+    .timeline-segment.idle:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .timeline-segment.handoff {
+      background: #17a2b8;
+    }
+
+    .visual-timeline-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .legend-color.run-success { background: #28a745; }
+    .legend-color.run-failed { background: #dc3545; }
+    .legend-color.idle { background: #e9ecef; border: 1px solid #dee2e6; }
+    .legend-color.handoff { background: #17a2b8; }
+
+    /* Tooltip */
+    .timeline-tooltip {
+      position: absolute;
+      background: #1a1a2e;
+      color: white;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      z-index: 100;
+      transform: translateX(-50%);
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      min-width: 140px;
+    }
+
+    .timeline-tooltip::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid #1a1a2e;
+    }
+
+    .tooltip-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .tooltip-status {
+      color: #adb5bd;
+      margin-bottom: 4px;
+    }
+
+    .tooltip-time {
+      color: #8a8a9a;
+      font-size: 11px;
+    }
+
+    .tooltip-duration,
+    .tooltip-cost {
+      color: #e9ecef;
+      margin-top: 4px;
+    }
+
+    /* Event highlight animation */
+    .timeline-item.event-highlight {
+      animation: highlightPulse 2s ease-out;
+    }
+
+    @keyframes highlightPulse {
+      0% {
+        background: rgba(74, 144, 217, 0.3);
+        box-shadow: 0 0 0 4px rgba(74, 144, 217, 0.2);
+      }
+      100% {
+        background: transparent;
+        box-shadow: none;
+      }
+    }
+
+    .timeline-item {
+      border-radius: var(--radius-sm);
+      transition: background 0.3s ease;
+    }
+  </style>
 </body>
 </html>

@@ -37,6 +37,19 @@
           </a>
         </div>
       </nav>
+      <!-- Dev Mode Switcher -->
+      <div class="sidebar-footer">
+        <div class="role-switcher">
+          <span class="role-switcher-label">Dev Mode</span>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice (MEMBER)</option>
+            <option value="manager">Bob (MANAGER)</option>
+            <option value="admin">Carol (ORG_ADMIN)</option>
+            <option value="support">Eve (SUPPORT)</option>
+            <option value="super" selected>Frank (SUPER_ADMIN)</option>
+          </select>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -70,21 +83,6 @@
       </header>
 
       <div class="main-content">
-        <!-- Role Switcher (Dev Mode) -->
-        <div class="role-switcher">
-          <label>Dev Mode - Switch User:</label>
-          <select id="role-select" onchange="switchRole(this.value)">
-            <option value="member">Alice Member (MEMBER)</option>
-            <option value="manager">Bob Manager (MANAGER)</option>
-            <option value="admin">Carol Admin (ORG_ADMIN)</option>
-            <option value="support">Eve Support (SUPPORT)</option>
-            <option value="super" selected>Frank Super (SUPER_ADMIN)</option>
-          </select>
-          <span style="margin-left: 16px; color: #856404;">
-            Note: Only SUPER_ADMIN can access this page
-          </span>
-        </div>
-
         <!-- Page Header -->
         <div class="page-header">
           <h1 class="page-title">Global Overview</h1>
@@ -93,36 +91,54 @@
         <!-- Global KPI Row -->
         <div class="kpi-row">
           <div class="kpi-card">
-            <div class="kpi-label">Total Organizations</div>
+            <div class="kpi-label">
+              Total Organizations
+              <span class="metric-info">?<span class="metric-tooltip">Number of active organizations on the platform.</span></span>
+            </div>
             <div class="kpi-value">24</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Total Runs</div>
+            <div class="kpi-label">
+              Total Runs
+              <span class="metric-info">?<span class="metric-tooltip">Total agent execution attempts across all organizations.</span></span>
+            </div>
             <div class="kpi-value">
               12,345
               <span class="kpi-trend up">↑ 8%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Platform Success Rate</div>
+            <div class="kpi-label">
+              Platform Success Rate
+              <span class="metric-info">?<span class="metric-tooltip">Weighted average success rate across all organizations.</span></span>
+            </div>
             <div class="kpi-value">
               93.5%
               <span class="kpi-trend down">↓ 1%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Total Cost</div>
+            <div class="kpi-label">
+              Total Cost
+              <span class="metric-info">?<span class="metric-tooltip">Sum of all run costs across all organizations.</span></span>
+            </div>
             <div class="kpi-value">
               $45,678
               <span class="kpi-trend up">↑ 12%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Total Tokens</div>
+            <div class="kpi-label">
+              Total Tokens
+              <span class="metric-info">?<span class="metric-tooltip">Total tokens consumed across all organizations.</span></span>
+            </div>
             <div class="kpi-value">89M</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Active Users</div>
+            <div class="kpi-label">
+              Active Users
+              <span class="metric-info">?<span class="metric-tooltip">Distinct users with at least one run in the selected period.</span></span>
+            </div>
             <div class="kpi-value">
               342
               <span class="kpi-trend up">↑ 5%</span>
@@ -134,7 +150,15 @@
         <div class="charts-row">
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Platform Usage</span>
+              <span class="chart-title">
+                Platform Usage
+                <span class="metric-info">?<span class="metric-tooltip">Total runs across all organizations over time.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Runs</button>
+                <button class="chart-toggle-btn">Sessions</button>
+                <button class="chart-toggle-btn">Users</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Stacked area chart: Runs by org over time]
@@ -142,11 +166,14 @@
           </div>
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Platform Cost</span>
-              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
-                <option>Total Cost</option>
-                <option>Per-Run Cost</option>
-              </select>
+              <span class="chart-title">
+                Platform Cost
+                <span class="metric-info">?<span class="metric-tooltip">Total API costs across all organizations.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Total Cost</button>
+                <button class="chart-toggle-btn">Per-Run Cost</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Stacked area chart: Cost by org over time]
@@ -172,13 +199,48 @@
             <thead>
               <tr>
                 <th>Organization</th>
-                <th class="sortable">Users</th>
-                <th class="sortable">Sessions</th>
-                <th class="sortable">Runs</th>
-                <th class="sortable">Success %</th>
-                <th class="sortable">Runs/Sess</th>
-                <th class="sortable">Handoff %</th>
-                <th class="sortable text-right">Cost</th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Users
+                    <span class="metric-info">?<span class="metric-tooltip">Active users with at least one run in the period.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Sessions
+                    <span class="metric-info">?<span class="metric-tooltip">Total sessions started in the period.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Runs
+                    <span class="metric-info">?<span class="metric-tooltip">Total agent execution attempts.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Success %
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of runs that completed successfully.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Runs/Sess
+                    <span class="metric-info">?<span class="metric-tooltip">Average runs per session. Higher may indicate iteration friction.</span></span>
+                  </span>
+                </th>
+                <th class="sortable">
+                  <span class="th-with-info">
+                    Handoff %
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of sessions with handoff events.</span></span>
+                  </span>
+                </th>
+                <th class="sortable text-right">
+                  <span class="th-with-info">
+                    Cost
+                    <span class="metric-info">?<span class="metric-tooltip">Total API cost for this organization.</span></span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -267,10 +329,30 @@
             <thead>
               <tr>
                 <th>Organization</th>
-                <th style="width: 200px;">Success Rate</th>
-                <th>Avg Runs/Session</th>
-                <th>Handoff Rate</th>
-                <th>Trend (WoW)</th>
+                <th style="width: 200px;">
+                  <span class="th-with-info">
+                    Success Rate
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of runs that completed successfully.</span></span>
+                  </span>
+                </th>
+                <th>
+                  <span class="th-with-info">
+                    Avg Runs/Session
+                    <span class="metric-info">?<span class="metric-tooltip">Average runs per session. Higher values may indicate friction.</span></span>
+                  </span>
+                </th>
+                <th>
+                  <span class="th-with-info">
+                    Handoff Rate
+                    <span class="metric-info">?<span class="metric-tooltip">Percentage of sessions with local handoff events.</span></span>
+                  </span>
+                </th>
+                <th>
+                  <span class="th-with-info">
+                    Trend (WoW)
+                    <span class="metric-info">?<span class="metric-tooltip">Week-over-week trend in overall health metrics.</span></span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>

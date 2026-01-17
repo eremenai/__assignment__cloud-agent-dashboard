@@ -320,6 +320,84 @@ a:hover {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Metric Info Icon */
+.metric-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--border-color);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: help;
+  position: relative;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.metric-info:hover {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.metric-info .metric-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  max-width: 280px;
+  white-space: normal;
+  text-align: left;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  line-height: 1.4;
+}
+
+.metric-info .metric-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #1a1a2e;
+}
+
+.metric-info:hover .metric-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Table header info icon */
+.th-with-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.th-with-info .metric-info {
+  width: 12px;
+  height: 12px;
+  font-size: 8px;
 }
 
 .kpi-value {
@@ -375,6 +453,37 @@ a:hover {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Chart Metric Toggle Buttons */
+.chart-toggles {
+  display: flex;
+  gap: 4px;
+}
+
+.chart-toggle-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chart-toggle-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.chart-toggle-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
 }
 
 .chart-placeholder {
@@ -850,29 +959,50 @@ a:hover {
   color: var(--text-secondary);
 }
 
-/* Role Switcher (Dev Mode) */
-.role-switcher {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
+/* Role Switcher (Dev Mode) - Sidebar Bottom */
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin-top: auto;
 }
 
-.role-switcher label {
+.role-switcher {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: 11px;
+}
+
+.role-switcher-label {
+  display: block;
+  color: #ffc107;
   font-weight: 500;
-  color: #856404;
+  margin-bottom: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .role-switcher select {
-  padding: 4px 8px;
+  width: 100%;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
-  border: 1px solid #ffc107;
-  background: white;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  background: rgba(0,0,0,0.2);
+  color: var(--text-sidebar);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.role-switcher select:focus {
+  outline: none;
+  border-color: #ffc107;
+}
+
+.role-switcher select option {
+  background: var(--bg-sidebar);
+  color: var(--text-sidebar);
 }
 
 /* Global Overview specific */

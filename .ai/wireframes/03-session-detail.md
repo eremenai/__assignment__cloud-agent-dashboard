@@ -26,6 +26,14 @@ Deep-dive view into a single session. Explains why a session needed multiple run
 |        |  | +----------+ +----------+ +----------+ +----------+ +----------+  ||
 |        |  +-------------------------------------------------------------------+|
 |        |                                                                       |
+|        |  VISUAL TIMELINE BAR                                                  |
+|        |  +-------------------------------------------------------------------+|
+|        |  | 2:34 PM                                                   3:19 PM ||
+|        |  | |▓▓▓▓▓▓▓|░░|▓▓▓▓▓▓▓▓▓▓▓|░░░░░░░░|▒▒|░░░░░░░░░░░░░░|▓▓▓▓▓|▓▓▓|   ||
+|        |  |  Run #1   │   Run #2      Wait   HO   Wait (handoff)  R#3  R#4    ||
+|        |  | Legend: ▓=Run(success) ▒=Run(fail) ░=Wait/Idle ▒▒=Handoff        ||
+|        |  +-------------------------------------------------------------------+|
+|        |                                                                       |
 |        |  [Timeline] [Runs] [Artifacts]                    <-- Tab navigation  |
 |        |  =====================================================================|
 |        |                                                                       |
@@ -83,7 +91,84 @@ Deep-dive view into a single session. Explains why a session needed multiple run
 
 ---
 
-### 2. Tab Navigation
+### 2. Visual Timeline Bar
+
+| Component | Description | States |
+|-----------|-------------|--------|
+| Timeline Bar | Horizontal bar visualization of session activity | loading, populated |
+| Time Axis | Start and end timestamps | - |
+| Segment | Colored bar segment representing an event/period | hover, selected |
+| Tooltip | Details popup on hover | hidden, visible |
+| Legend | Color key for segment types | - |
+
+**Purpose:**
+Provides an at-a-glance view of the entire session timeline, showing:
+- When runs executed and how long they took
+- Idle/wait periods between activities
+- Where handoffs occurred
+- Relative time distribution across the session
+
+**Segment Types & Colors:**
+
+| Segment Type | Color | Description |
+|--------------|-------|-------------|
+| Run (Success) | Green (#28a745) | Successful run execution period |
+| Run (Failed) | Red (#dc3545) | Failed run execution period |
+| Run (Timeout) | Orange (#fd7e14) | Timed-out run execution period |
+| Run (Canceled) | Gray (#6c757d) | Canceled run execution period |
+| Idle/Wait | Light gray (#e9ecef) | Time between events (user thinking, etc.) |
+| Handoff | Teal (#17a2b8) | Local handoff event marker |
+| User Message | Blue (#007bff) | User message event marker (thin line) |
+| Agent Message | Purple (#6f42c1) | Agent message event marker (thin line) |
+
+**Visual Layout:**
+```
++-----------------------------------------------------------------------+
+| 2:34 PM                                                       3:19 PM |
+| ├──────────────────────────────────────────────────────────────────┤  |
+| |████|░|██████████|░░░░░░|▒|░░░░░░░░░░░░░░░|█████|███|              |  |
+| └──────────────────────────────────────────────────────────────────┘  |
+| Legend: █ Run (success)  ▓ Run (failed)  ░ Idle  ▒ Handoff           |
++-----------------------------------------------------------------------+
+```
+
+**Interactions:**
+
+| Interaction | Behavior |
+|-------------|----------|
+| Hover segment | Show tooltip with details (event type, time, duration, cost if applicable) |
+| Click segment | Scroll to corresponding item in Timeline list below; highlight the item |
+| Hover + Timeline sync | Corresponding Timeline item gets subtle highlight |
+
+**Tooltip Content by Segment Type:**
+
+| Segment | Tooltip Shows |
+|---------|---------------|
+| Run | "Run #N • Status • Duration • Cost • Tokens" |
+| Idle | "Idle • Duration" |
+| Handoff | "Local Handoff • Method • User" |
+| User Message | "User message • Time • Preview text" |
+| Agent Message | "Agent response • Time • Preview text" |
+
+**Click-to-Scroll Behavior:**
+1. User clicks a segment (e.g., Run #2)
+2. Timeline tab activates if not already active
+3. Page scrolls to the corresponding event in the vertical timeline
+4. Event item gets highlighted (pulsing border or background flash)
+5. Highlight fades after 2 seconds
+
+**Data Requirements:**
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| sessionStart | session.firstMessageAt | Left edge of timeline |
+| sessionEnd | session.lastMessageAt | Right edge of timeline |
+| events | API events list | All events with timestamps |
+| runs | API runs list | Run start/end times, status |
+
+---
+
+### 3. Tab Navigation
 
 | Tab | Description | Default |
 |-----|-------------|---------|
@@ -93,7 +178,7 @@ Deep-dive view into a single session. Explains why a session needed multiple run
 
 ---
 
-### 3. Timeline View (Default Tab)
+### 4. Timeline View (Default Tab)
 
 | Component | Description | States |
 |-----------|-------------|--------|
@@ -128,7 +213,7 @@ Deep-dive view into a single session. Explains why a session needed multiple run
 
 ---
 
-### 4. Runs Tab
+### 5. Runs Tab
 
 | Component | Description | States |
 |-----------|-------------|--------|
@@ -171,7 +256,7 @@ Deep-dive view into a single session. Explains why a session needed multiple run
 
 ---
 
-### 5. Artifacts Tab
+### 6. Artifacts Tab
 
 | Component | Description | States |
 |-----------|-------------|--------|
@@ -207,7 +292,7 @@ Deep-dive view into a single session. Explains why a session needed multiple run
 
 ---
 
-### 6. In-Session Charts (Optional Section)
+### 7. In-Session Charts (Optional Section)
 
 | Component | Description | States |
 |-----------|-------------|--------|

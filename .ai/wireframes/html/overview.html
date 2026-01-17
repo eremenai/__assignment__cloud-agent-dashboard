@@ -37,6 +37,19 @@
           </a>
         </div>
       </nav>
+      <!-- Dev Mode Switcher -->
+      <div class="sidebar-footer">
+        <div class="role-switcher">
+          <span class="role-switcher-label">Dev Mode</span>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice (MEMBER)</option>
+            <option value="manager">Bob (MANAGER)</option>
+            <option value="admin" selected>Carol (ORG_ADMIN)</option>
+            <option value="support">Eve (SUPPORT)</option>
+            <option value="super">Frank (SUPER_ADMIN)</option>
+          </select>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -69,19 +82,7 @@
         </div>
       </header>
 
-      <!-- Role Switcher (Dev Mode) -->
       <div class="main-content">
-        <div class="role-switcher">
-          <label>Dev Mode - Switch User:</label>
-          <select id="role-select" onchange="switchRole(this.value)">
-            <option value="member">Alice Member (MEMBER)</option>
-            <option value="manager">Bob Manager (MANAGER)</option>
-            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
-            <option value="support">Eve Support (SUPPORT)</option>
-            <option value="super">Frank Super (SUPER_ADMIN)</option>
-          </select>
-        </div>
-
         <!-- Page Header -->
         <div class="page-header">
           <h1 class="page-title">Organization Overview</h1>
@@ -90,35 +91,50 @@
         <!-- KPI Row A - Platform Basics -->
         <div class="kpi-row">
           <div class="kpi-card">
-            <div class="kpi-label">Total Runs</div>
+            <div class="kpi-label">
+              Total Runs
+              <span class="metric-info">?<span class="metric-tooltip">Total number of agent execution attempts in the selected time period.</span></span>
+            </div>
             <div class="kpi-value">
               1,234
               <span class="kpi-trend up">↑ 5%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Success Rate</div>
+            <div class="kpi-label">
+              Success Rate
+              <span class="metric-info">?<span class="metric-tooltip">Percentage of runs that completed successfully (SUCCEEDED / total runs).</span></span>
+            </div>
             <div class="kpi-value">
               94.2%
               <span class="kpi-trend down">↓ 1%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">p95 Duration</div>
+            <div class="kpi-label">
+              p95 Duration
+              <span class="metric-info">?<span class="metric-tooltip">95th percentile run duration. 95% of runs complete faster than this time.</span></span>
+            </div>
             <div class="kpi-value">
               45s
               <span class="kpi-trend neutral">→</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Total Cost</div>
+            <div class="kpi-label">
+              Total Cost
+              <span class="metric-info">?<span class="metric-tooltip">Sum of all run costs in the selected period, based on token usage and pricing.</span></span>
+            </div>
             <div class="kpi-value">
               $1,234
               <span class="kpi-trend up">↑ 8%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Total Tokens</div>
+            <div class="kpi-label">
+              Total Tokens
+              <span class="metric-info">?<span class="metric-tooltip">Total input + output tokens consumed across all runs.</span></span>
+            </div>
             <div class="kpi-value">
               2.1M
               <span class="kpi-trend up">↑ 6%</span>
@@ -129,35 +145,50 @@
         <!-- KPI Row B - Session/Friction -->
         <div class="kpi-row">
           <div class="kpi-card">
-            <div class="kpi-label">Avg Runs/Session</div>
+            <div class="kpi-label">
+              Avg Runs/Session
+              <span class="metric-info">?<span class="metric-tooltip">Average number of runs per session. Higher values may indicate more iteration or complexity.</span></span>
+            </div>
             <div class="kpi-value">
               2.3
               <span class="kpi-trend up">↑ 2%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Avg Active Time</div>
+            <div class="kpi-label">
+              Avg Active Time
+              <span class="metric-info">?<span class="metric-tooltip">Average sum of run execution time per session. Time the agent spent actively working.</span></span>
+            </div>
             <div class="kpi-value">
               4m 32s
               <span class="kpi-trend down">↓ 5%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Avg Lifespan</div>
+            <div class="kpi-label">
+              Avg Lifespan
+              <span class="metric-info">?<span class="metric-tooltip">Average time between first and last message in a session. Total session duration.</span></span>
+            </div>
             <div class="kpi-value">
               18m
               <span class="kpi-trend neutral">→</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Handoff Rate</div>
+            <div class="kpi-label">
+              Handoff Rate
+              <span class="metric-info">?<span class="metric-tooltip">Percentage of sessions where users exported results locally (teleport, CLI, etc). May indicate need for local inspection.</span></span>
+            </div>
             <div class="kpi-value">
               34%
               <span class="kpi-trend down">↓ 3%</span>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Post-Handoff Iter.</div>
+            <div class="kpi-label">
+              Post-Handoff Iter.
+              <span class="metric-info">?<span class="metric-tooltip">Percentage of sessions with additional runs after a local handoff. Indicates handoff exposed issues requiring more work.</span></span>
+            </div>
             <div class="kpi-value">
               12%
               <span class="kpi-trend down">↓ 1%</span>
@@ -169,12 +200,15 @@
         <div class="charts-row">
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Usage Trends</span>
-              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
-                <option>Runs</option>
-                <option>Sessions</option>
-                <option>Active Users</option>
-              </select>
+              <span class="chart-title">
+                Usage Trends
+                <span class="metric-info">?<span class="metric-tooltip">Activity volume over time. Track adoption and usage patterns.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Runs</button>
+                <button class="chart-toggle-btn">Sessions</button>
+                <button class="chart-toggle-btn">Active Users</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Line chart: Runs over time]
@@ -182,12 +216,15 @@
           </div>
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Cost Trends</span>
-              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
-                <option>Total Cost</option>
-                <option>Cost per Run</option>
-                <option>Token Usage</option>
-              </select>
+              <span class="chart-title">
+                Cost Trends
+                <span class="metric-info">?<span class="metric-tooltip">Spending patterns over time. Monitor cost efficiency and budget.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Total Cost</button>
+                <button class="chart-toggle-btn">Cost/Run</button>
+                <button class="chart-toggle-btn">Tokens</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Line chart: Cost over time]
@@ -198,7 +235,16 @@
         <div class="charts-row">
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Friction Trends</span>
+              <span class="chart-title">
+                Friction Trends
+                <span class="metric-info">?<span class="metric-tooltip">Indicators of task complexity and iteration. Higher values may suggest areas for improvement.</span></span>
+              </span>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">All</button>
+                <button class="chart-toggle-btn">Runs/Sess</button>
+                <button class="chart-toggle-btn">Handoff %</button>
+                <button class="chart-toggle-btn">Post-H %</button>
+              </div>
             </div>
             <div class="chart-placeholder">
               [Multi-line: Runs/Sess, Handoff%, Post-Handoff%]
@@ -206,7 +252,10 @@
           </div>
           <div class="chart-card">
             <div class="chart-header">
-              <span class="chart-title">Reliability</span>
+              <span class="chart-title">
+                Reliability
+                <span class="metric-info">?<span class="metric-tooltip">Success rate trends and failure breakdown. Track system health.</span></span>
+              </span>
             </div>
             <div class="chart-placeholder" style="height: 120px;">
               [Line chart: Success rate trend]
@@ -243,15 +292,17 @@
         <!-- Top Sessions Table -->
         <div class="table-card">
           <div class="table-header">
-            <span class="table-title">Top Sessions</span>
+            <span class="table-title">
+              Top Sessions
+              <span class="metric-info">?<span class="metric-tooltip">Sessions ranked by selected metric. Click a row to view session details.</span></span>
+            </span>
             <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="text-muted" style="font-size: 12px;">Sort by:</span>
-              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
-                <option>Cost</option>
-                <option>Runs</option>
-                <option>Lifespan</option>
-                <option>Failures</option>
-              </select>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Cost</button>
+                <button class="chart-toggle-btn">Runs</button>
+                <button class="chart-toggle-btn">Lifespan</button>
+                <button class="chart-toggle-btn">Failures</button>
+              </div>
               <a href="sessions.html" class="btn-text">View all →</a>
             </div>
           </div>
@@ -332,15 +383,17 @@
         <!-- Top Users Table -->
         <div class="table-card">
           <div class="table-header">
-            <span class="table-title">Top Users</span>
+            <span class="table-title">
+              Top Users
+              <span class="metric-info">?<span class="metric-tooltip">Users ranked by selected metric. Click a row to view user details.</span></span>
+            </span>
             <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="text-muted" style="font-size: 12px;">Sort by:</span>
-              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
-                <option>Cost</option>
-                <option>Runs</option>
-                <option>Sessions</option>
-                <option>Handoff Rate</option>
-              </select>
+              <div class="chart-toggles">
+                <button class="chart-toggle-btn active">Cost</button>
+                <button class="chart-toggle-btn">Runs</button>
+                <button class="chart-toggle-btn">Sessions</button>
+                <button class="chart-toggle-btn">Handoff %</button>
+              </div>
               <a href="users.html" class="btn-text">View all →</a>
             </div>
           </div>
