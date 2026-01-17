@@ -105,8 +105,27 @@ When you respond in a run, structure output as:
 - **Changes**: what you modified (files/areas).
 - **Verification**: exact commands to run + what passed/needs attention.
 - **Cleanup**: what was deleted and why.
+- 
+## 9) Commit message convention
+Use Conventional Commits:
 
-## 9) If uncertain
+< type >(< scope >): < subject >
+
+Body (optional):
+- 2–6 bullets, each starts with a verb
+- explain why if non-obvious
+- reference issue IDs like ABC-123 when present
+
+Rules:
+- type ∈ feat|fix|refactor|chore|docs|test|perf|build|ci
+- scope: optional, kebab-case, max 20 chars
+- subject: imperative, <= 72 chars, no period
+- breaking change: add ! after type/scope and mention in body
+  Examples:
+- feat(api): add pagination to search endpoint
+- refactor(ui)!: remove legacy widget store
+
+## 10) If uncertain
 - If requirements are unclear, make the smallest reasonable assumption, state it
   explicitly, and proceed.
 - Prefer asking for one clarification only when truly blocking.
