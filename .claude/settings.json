@@ -1,14 +1,18 @@
 {
-  "enabledPlugins": {
-    "commit-commands@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true
-  },
   "permissions": {
     "allow": [
       "Bash(pnpm install)",
       "Bash(pnpm check:*)",
-      "Bash(pnpm check:fix:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(pnpm test*)"
     ]
+  },
+  "enabledPlugins": {
+    "commit-commands@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true
   }
 }

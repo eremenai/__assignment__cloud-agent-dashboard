@@ -20,10 +20,13 @@ export function NavUser({
 }: {
   readonly user: {
     readonly name: string;
-    readonly email: string;
-    readonly avatar: string;
-  };
+    readonly email?: string;
+    readonly avatar?: string;
+  } | null;
 }) {
+  if (!user) {
+    return null;
+  }
   const { isMobile } = useSidebar();
 
   return (
