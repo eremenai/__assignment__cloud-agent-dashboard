@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
 import { rootUser } from "@/data/users";
-import { SIDEBAR_COLLAPSIBLE, SIDEBAR_VARIANT } from "@/lib/preferences/layout";
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 
 import { NavMain } from "./nav-main";
@@ -60,7 +59,7 @@ const _data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar {...props} variant={SIDEBAR_VARIANT} collapsible={SIDEBAR_COLLAPSIBLE}>
+    <Sidebar {...props} variant="inset" collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

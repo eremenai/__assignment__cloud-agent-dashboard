@@ -1,17 +1,20 @@
 import type { ReactNode } from "react";
 
+import { Roboto } from "next/font/google";
+
 import type { Metadata } from "next";
 
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_CONFIG } from "@/config/app-config";
-import { fontVars } from "@/lib/fonts/registry";
-import { SIDEBAR_COLLAPSIBLE, SIDEBAR_VARIANT } from "@/lib/preferences/layout";
-import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
-import { THEME_PRESET } from "@/lib/preferences/theme";
-import { ThemeBootScript } from "@/scripts/theme-boot";
-import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 
 import "./globals.css";
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-roboto",
+});
 
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,
@@ -19,27 +22,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const { theme_mode, content_layout } = PREFERENCE_DEFAULTS;
   return (
-    <html
-      lang="en"
-      data-theme-mode={theme_mode}
-      data-theme-preset={THEME_PRESET}
-      data-content-layout={content_layout}
-      data-navbar-style="sticky"
-      data-sidebar-variant={SIDEBAR_VARIANT}
-      data-sidebar-collapsible={SIDEBAR_COLLAPSIBLE}
-      suppressHydrationWarning
-    >
-      <head>
-        {/* Applies theme and layout preferences on load to avoid flicker and unnecessary server rerenders. */}
-        <ThemeBootScript />
-      </head>
-      <body className={`${fontVars} min-h-screen antialiased`}>
-        <PreferencesStoreProvider themeMode={theme_mode} contentLayout={content_layout}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${roboto.variable} min-h-screen antialiased`}>
+        <ThemeProvider>
           {children}
           <Toaster />
-        </PreferencesStoreProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
