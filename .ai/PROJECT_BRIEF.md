@@ -47,7 +47,10 @@ One autonomous cloud execution attempt within a session.
 - `executionMs` (computed)
 - `failureCategory` (if failed; limited controlled vocabulary)
 - `artifactSummary`: `filesChanged`, `linesAdded`, `linesDeleted`, `testsRun`, `testsPassed` (if available)
-- `computeCostCents` (or tokens/compute in lowest common denominator)
+- `inputTokens`: number of input tokens consumed
+- `outputTokens`: number of output tokens generated
+- `totalTokens`: `inputTokens + outputTokens` (computed)
+- `costCents`: monetary cost in cents (derived from token usage and pricing)
 
 ### LocalHandoffEvent
 Represents exporting/teleporting session results to local.
@@ -71,10 +74,13 @@ Represents exporting/teleporting session results to local.
 - **P95 run duration**
 - **Avg queue wait time** (if captured)
 
-### D) Cost
-- **Total cost (period)**: sum(`computeCostCents`)
-- **Cost per run**: avg(`computeCostCents`)
+### D) Cost & Token Usage
+- **Total cost (period)**: sum(`costCents`)
+- **Cost per run**: avg(`costCents`)
 - **Cost by user** (top N)
+- **Total tokens (period)**: sum(`totalTokens`)
+- **Tokens per run**: avg(`totalTokens`)
+- **Input/Output token ratio**: sum(`inputTokens`) / sum(`outputTokens`)
 
 ### E) Session-centric metrics (since there is no explicit acceptance)
 These are the core “quality / friction” proxies in this product model.
@@ -107,22 +113,22 @@ Notes:
 Goal: 30-second snapshot for admins/managers.
 
 Widgets:
-- KPI cards: Active users, Runs, Success rate, Total cost, Avg runs/session, Local handoff rate
-- Time series: Runs/day, Success rate trend, Cost trend
-- Tables: Top users by runs, Top failure categories
+- KPI cards: Active users, Runs, Success rate, Total cost, Total tokens, Avg runs/session, Local handoff rate
+- Time series: Runs/day, Success rate trend, Cost trend, Token usage trend
+- Tables: Top users by runs, Top users by cost/tokens, Top failure categories
 
 ### 2) Sessions
 Goal: find which sessions are costly / problematic / high-iteration.
 
-- Table with: session id (short), createdBy, last active, runs (period), success rate, total cost, agent active time, lifespan, local handoff (yes/no), post-handoff iteration (yes/no)
+- Table with: session id (short), createdBy, last active, runs (period), success rate, total cost, total tokens, agent active time, lifespan, local handoff (yes/no), post-handoff iteration (yes/no)
 - Filters: time range, user (optional)
 
 ### 3) Session Detail
 Goal: explain *why* a session needed multiple runs or handoff.
 
 - Timeline view: messages + runs + handoff events
-- Run list: status, duration, cost, failure category
-- Session metrics summary: runs count, total agent time, lifespan, handoff count, post-handoff iteration
+- Run list: status, duration, tokens (input/output), cost, failure category
+- Session metrics summary: runs count, total agent time, total tokens, total cost, lifespan, handoff count, post-handoff iteration
 
 ## Data export
 - CSV export for Org Overview tables and Sessions list.
