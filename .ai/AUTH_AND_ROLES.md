@@ -56,7 +56,7 @@ These roles are scoped to a single organization:
 ### Org-Scoped Users (ORG_ADMIN, MANAGER, MEMBER)
 - No org selector shown
 - Dashboard automatically scoped to their `org_id` from token
-- Navigation: Org Overview → Sessions → Session Detail
+- Navigation: Overview → Sessions → Users → Session Detail
 
 ### Support Users (SUPPORT)
 - **Org selector dropdown** in header
@@ -82,7 +82,9 @@ These roles are scoped to a single organization:
 | View org/team aggregates | ✓ (read-only) | ✓ | ✓ | ✓ | ✓ |
 | View all org sessions | - | ✓ | ✓ | ✓ | ✓ |
 | View session details | Own | All | All | All | All |
-| Export CSV | - | ✓ | ✓ | ✓ | ✓ |
+| View users list | - | ✓ | ✓ | ✓ | ✓ |
+| View user detail | Own | All | All | All | All |
+| Export CSV/JSON | - | ✓ | ✓ | ✓ | ✓ |
 | Switch org context | - | - | - | ✓ | ✓ |
 | View global overview | - | - | - | - | ✓ |
 

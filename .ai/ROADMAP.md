@@ -23,6 +23,8 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 - [ ] `.ai/wireframes/02-sessions-list.md` - Sessions table with filters
 - [ ] `.ai/wireframes/03-session-detail.md` - Timeline + run details view
 - [ ] `.ai/wireframes/04-global-overview.md` - Cross-org view for SUPER_ADMIN
+- [ ] `.ai/wireframes/05-users.md` - Users comparison table with friction metrics
+- [ ] `.ai/wireframes/06-user-detail.md` - Individual user analytics and sessions
 
 **Format:** Each wireframe includes:
 1. ASCII diagram (quick visual reference)
@@ -105,7 +107,18 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 - [ ] Top orgs by usage/cost table
 - [ ] Org health comparison (success rates)
 
-### 3.8 Mock Data Layer
+### 3.8 Users Page
+- [ ] Users table (sortable, paginated)
+- [ ] Columns: Sessions, Runs, Avg runs/session, Avg active time, Local handoff rate, Post-handoff iteration rate, Success rate, Cost
+- [ ] Click row → User Detail page
+
+### 3.9 User Detail Page
+- [ ] User header (name, email, role, member since, last active)
+- [ ] KPI row (user stats for selected period)
+- [ ] Trends charts (activity, cost, friction over time)
+- [ ] User's sessions table (pre-filtered, links to Session Detail)
+
+### 3.10 Mock Data Layer
 - [ ] Define TypeScript types matching domain model
 - [ ] Create realistic mock data generator (multiple orgs, users, roles)
 - [ ] Implement mock API handlers (or static data)

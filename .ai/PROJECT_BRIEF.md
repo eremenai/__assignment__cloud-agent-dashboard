@@ -62,6 +62,14 @@ One autonomous cloud execution attempt within a session.
 - `totalTokens`: `inputTokens + outputTokens` (computed)
 - `costCents`: monetary cost in cents (derived from token usage and pricing)
 
+### Event
+A timestamped occurrence within a session, used for timeline visualization.
+- `eventId`, `sessionId`
+- `timestamp`
+- `type`: `MESSAGE | RUN_START | RUN_END | HANDOFF`
+- `actorType`: `USER | AGENT | SYSTEM`
+- `payload`: type-specific data (message content, runId reference, etc.)
+
 ### LocalHandoffEvent
 Represents exporting/teleporting session results to local.
 - `handoffId`, `sessionId`, `orgId`, `userId`
@@ -120,29 +128,93 @@ Notes:
 - **Data retention**: 1 year of historical data available for queries.
 
 ## Dashboard information architecture (V1)
-### 1) Org Overview
-Goal: 30-second snapshot for admins/managers.
 
-Widgets:
-- KPI cards: Active users, Runs, Success rate, Total cost, Total tokens, Avg runs/session, Local handoff rate
-- Time series: Runs/day, Success rate trend, Cost trend, Token usage trend
-- Tables: Top users by runs, Top users by cost/tokens, Top failure categories
+### 1) Org Overview (`/dashboard`)
+Goal: 30-second health check for admins/managers — adoption, reliability, cost, friction.
 
-### 2) Sessions
+**A. KPI Row — Platform Basics**
+- Total Runs, Success Rate, p95 Run Duration, Total Cost, Total Tokens
+
+**B. KPI Row — Session/Friction**
+- Avg Runs/Session, Avg Active Agent Time/Session, Avg Session Lifespan, Local Handoff Rate, Post-Handoff Iteration Rate
+
+**C. Trends — Usage**
+- Chart: Runs over time, Sessions over time (toggle: Active Users)
+
+**D. Trends — Cost**
+- Chart: Total cost over time (toggle: Cost per run, Token usage)
+
+**E. Trends — Friction**
+- Chart: Avg Runs/Session over time, Local Handoff Rate over time, Post-Handoff Iteration Rate over time
+
+**F. Reliability**
+- Chart: Success rate trend
+- Table: Top failure categories (count + %)
+
+**G. Top Sessions Table**
+- Sortable by: cost, runs, lifespan, failures
+- Columns: Session ID, Started, Lifespan, Active agent time, Runs, Local handoffs, Post-handoff iteration (Y/N), Success %, Cost
+- Row click → Session Detail
+
+**H. Top Users Table**
+- Sortable by: cost, runs, avg runs/session, handoff rates
+- Columns: User, Sessions, Runs, Avg runs/session, Avg active time, Local handoff rate, Post-handoff iteration rate, Success rate, Cost
+- Row click → Users page filtered to that user
+
+### 2) Sessions (`/sessions`)
 Goal: find which sessions are costly / problematic / high-iteration.
 
-- Table with: session id (short), createdBy, last active, runs (period), success rate, total cost, total tokens, agent active time, lifespan, local handoff (yes/no), post-handoff iteration (yes/no)
-- Filters: time range, user (optional)
+**Filters bar:** Date range, search (session id), status, duration range, cost range, local handoff (yes/no), post-handoff iteration (yes/no)
 
-### 3) Session Detail
+**Summary strip (aggregated):** Avg Runs/Session, Avg Active Agent Time, Avg Session Lifespan, Local Handoff Rate, Post-Handoff Iteration Rate
+
+**Sessions table:** session id, createdBy, started, lifespan, active agent time, runs, local handoffs, post-handoff iteration (Y/N), success %, cost
+- Row click → Session Detail
+
+### 3) Session Detail (`/sessions/:id`)
 Goal: explain *why* a session needed multiple runs or handoff.
 
-- Timeline view: messages + runs + handoff events
-- Run list: status, duration, tokens (input/output), cost, failure category
-- Session metrics summary: runs count, total agent time, total tokens, total cost, lifespan, handoff count, post-handoff iteration
+**Session header:** Session ID, Started, Lifespan, Active Agent Time, Runs count, Local Handoffs count, Post-handoff iteration (Y/N)
+
+**Timeline view:** Chronological events (user messages, run start/end, handoff events)
+
+**Runs table:** Run #, Status, Duration, Tokens (in/out), Cost, Error category (if failed)
+
+**In-session distributions:** Run duration distribution, Run cost distribution (charts)
+
+**Artifacts & Handoff History:** Files changed summary, handoff events list (timestamp, user, method)
+
+### 4) Users (`/users`)
+Goal: compare users — power users vs low adopters, cost drivers, friction hotspots.
+
+**Filters bar:** Date range, search user
+
+**Users table (sortable, paginated):**
+- Columns: User, Sessions, Runs, Avg runs/session, Avg active agent time, Avg session lifespan, Local handoff rate, Post-handoff iteration rate, Success rate, Total cost, Cost/run
+- Row click → User Detail
+
+### 5) User Detail (`/users/:userId`)
+Goal: deep-dive into a specific user's activity, patterns, and sessions.
+
+**User header:** Name, Email, Role, Member since, Last active
+
+**A. KPI Row — User Stats (for selected period)**
+- Sessions, Runs, Avg Runs/Session, Avg Active Agent Time, Avg Session Lifespan, Local Handoff Rate, Post-Handoff Iteration Rate, Success Rate, Total Cost
+
+**B. Trends — User Activity**
+- Chart: Runs over time, Sessions over time
+- Chart: Cost over time
+
+**C. Trends — User Friction**
+- Chart: Avg Runs/Session over time, Local Handoff Rate over time
+
+**D. User's Sessions Table**
+- Same columns as Sessions page, pre-filtered to this user
+- Columns: Session ID, Started, Lifespan, Active agent time, Runs, Local handoffs, Post-handoff iteration (Y/N), Success %, Cost
+- Row click → Session Detail
 
 ## Data export
-- CSV export for Org Overview tables and Sessions list.
+- CSV/JSON export for Org Overview tables, Sessions list, and Users list.
 
 ## Future (explicitly out of scope for V1)
 - External integrations: PR lifecycle, merges, CI checks, issue trackers
