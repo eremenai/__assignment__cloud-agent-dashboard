@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Detail - Agent Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">A</span>
+        Agent Analytics
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="overview.html" class="nav-item">
+            <span class="icon">📊</span>
+            Overview
+          </a>
+          <a href="sessions.html" class="nav-item active">
+            <span class="icon">📋</span>
+            Sessions
+          </a>
+          <a href="users.html" class="nav-item">
+            <span class="icon">👥</span>
+            Users
+          </a>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-section super-admin-only" style="display: none;">
+          <a href="global.html" class="nav-item">
+            <span class="icon">🌐</span>
+            Global
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <nav class="breadcrumb">
+            <a href="sessions.html">Sessions</a>
+            <span class="separator">›</span>
+            <span class="current">#abc123def</span>
+          </nav>
+        </div>
+        <div class="header-right">
+          <div class="dropdown org-selector-wrapper" style="display: none;">
+            <button class="dropdown-trigger">
+              Acme Corp <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="dropdown">
+            <button class="dropdown-trigger">
+              Last 7 days <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="user-menu">
+            <div class="user-avatar">CA</div>
+            <div class="user-info">
+              <div class="user-name">Carol Admin</div>
+              <div class="user-role">ORG_ADMIN</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- Role Switcher (Dev Mode) -->
+        <div class="role-switcher">
+          <label>Dev Mode - Switch User:</label>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice Member (MEMBER)</option>
+            <option value="manager">Bob Manager (MANAGER)</option>
+            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
+            <option value="support">Eve Support (SUPPORT)</option>
+            <option value="super">Frank Super (SUPER_ADMIN)</option>
+          </select>
+        </div>
+
+        <!-- Session Header -->
+        <div class="session-header-card">
+          <div class="session-header-top">
+            <div>
+              <div class="session-id">Session #abc123def</div>
+              <div class="session-meta">
+                Created by: alice@acme.com • Started: Jan 15, 2024 at 2:34 PM
+              </div>
+            </div>
+            <span class="badge badge-warning">Post-Handoff Iteration</span>
+          </div>
+          <div class="kpi-row" style="margin-bottom: 0;">
+            <div class="kpi-card">
+              <div class="kpi-label">Lifespan</div>
+              <div class="kpi-value">45m</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Active Time</div>
+              <div class="kpi-value">12m 5s</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Runs</div>
+              <div class="kpi-value">4</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Local Handoffs</div>
+              <div class="kpi-value">2</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Success Rate</div>
+              <div class="kpi-value">75%</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Total Cost</div>
+              <div class="kpi-value">$12.34</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <div class="tab active" onclick="showTab('timeline')">Timeline</div>
+          <div class="tab" onclick="showTab('runs')">Runs</div>
+          <div class="tab" onclick="showTab('artifacts')">Artifacts</div>
+        </div>
+
+        <!-- Timeline Tab -->
+        <div id="timeline-tab" class="tab-content">
+          <div class="table-card">
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-marker user">👤</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:34 PM</span>
+                    <span class="timeline-actor" style="color: #004085;">USER</span>
+                  </div>
+                  <div class="timeline-title">Started session</div>
+                  <div class="timeline-body">
+                    "Fix the login bug in auth.ts - users are getting logged out after 5 minutes"
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker system">▶</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:34 PM</span>
+                    <span class="timeline-actor" style="color: #495057;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #1 started</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker success">✓</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:38 PM</span>
+                    <span class="timeline-actor" style="color: #155724;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #1 completed <span class="badge badge-success">SUCCESS</span></div>
+                  <div class="timeline-meta">
+                    <span>Duration: 4m 12s</span>
+                    <span>Cost: $2.34</span>
+                    <span>Tokens: 45,234</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker agent">🤖</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:39 PM</span>
+                    <span class="timeline-actor" style="color: #6f42c1;">AGENT</span>
+                  </div>
+                  <div class="timeline-title">Agent response</div>
+                  <div class="timeline-body">
+                    "I've fixed the login bug by extending the session timeout in auth.ts. The issue was that the token expiry was set to 5 minutes instead of the intended 30 minutes..."
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker user">👤</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:45 PM</span>
+                    <span class="timeline-actor" style="color: #004085;">USER</span>
+                  </div>
+                  <div class="timeline-title">User message</div>
+                  <div class="timeline-body">
+                    "Can you also add better error handling for expired tokens?"
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker system">▶</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:45 PM</span>
+                    <span class="timeline-actor" style="color: #495057;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #2 started</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker error">✗</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">2:52 PM</span>
+                    <span class="timeline-actor" style="color: #721c24;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #2 completed <span class="badge badge-danger">FAILED</span></div>
+                  <div class="timeline-meta">
+                    <span>Duration: 7m 3s</span>
+                    <span>Error: TIMEOUT</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker handoff">↗</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">3:00 PM</span>
+                    <span class="timeline-actor" style="color: #0c5460;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Local handoff <span class="badge badge-info">TELEPORT</span></div>
+                  <div class="timeline-body">
+                    User: alice@acme.com
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker user">👤</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">3:15 PM</span>
+                    <span class="timeline-actor" style="color: #004085;">USER</span>
+                  </div>
+                  <div class="timeline-title">User message</div>
+                  <div class="timeline-body">
+                    "Let's try again with a smaller scope - just handle the token refresh"
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker system">▶</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">3:15 PM</span>
+                    <span class="timeline-actor" style="color: #495057;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #3 started</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker success">✓</div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-time">3:19 PM</span>
+                    <span class="timeline-actor" style="color: #155724;">SYSTEM</span>
+                  </div>
+                  <div class="timeline-title">Run #3 completed <span class="badge badge-success">SUCCESS</span></div>
+                  <div class="timeline-meta">
+                    <span>Duration: 3m 48s</span>
+                    <span>Cost: $1.89</span>
+                    <span>Tokens: 32,456</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Runs Tab -->
+        <div id="runs-tab" class="tab-content" style="display: none;">
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Run #</th>
+                  <th>Status</th>
+                  <th>Started</th>
+                  <th>Duration</th>
+                  <th>Queue Wait</th>
+                  <th>Input Tokens</th>
+                  <th>Output Tokens</th>
+                  <th class="text-right">Cost</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td><span class="badge badge-success">SUCCESS</span></td>
+                  <td>2:34 PM</td>
+                  <td>4m 12s</td>
+                  <td>8s</td>
+                  <td>32,456</td>
+                  <td>12,778</td>
+                  <td class="text-right font-bold">$2.34</td>
+                  <td>-</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><span class="badge badge-danger">FAILED</span></td>
+                  <td>2:45 PM</td>
+                  <td>7m 3s</td>
+                  <td>12s</td>
+                  <td>45,123</td>
+                  <td>8,234</td>
+                  <td class="text-right font-bold">$3.12</td>
+                  <td><span class="text-danger">TIMEOUT</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><span class="badge badge-success">SUCCESS</span></td>
+                  <td>3:15 PM</td>
+                  <td>3m 48s</td>
+                  <td>5s</td>
+                  <td>23,456</td>
+                  <td>9,000</td>
+                  <td class="text-right font-bold">$1.89</td>
+                  <td>-</td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td><span class="badge badge-success">SUCCESS</span></td>
+                  <td>3:25 PM</td>
+                  <td>2m 15s</td>
+                  <td>3s</td>
+                  <td>18,234</td>
+                  <td>6,789</td>
+                  <td class="text-right font-bold">$1.45</td>
+                  <td>-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- In-session Charts -->
+          <div class="charts-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">Run Duration Distribution</span>
+              </div>
+              <div class="chart-placeholder">
+                [Bar chart: Duration per run]
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">Run Cost Distribution</span>
+              </div>
+              <div class="chart-placeholder">
+                [Bar chart: Cost per run]
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Artifacts Tab -->
+        <div id="artifacts-tab" class="tab-content" style="display: none;">
+          <div class="table-card">
+            <div class="table-header">
+              <span class="table-title">Files Changed (across all runs)</span>
+              <span class="text-muted">5 files | +120 lines | -45 lines</span>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th class="text-right">Added</th>
+                  <th class="text-right">Removed</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="font-mono">src/auth/login.ts</td>
+                  <td class="text-right text-success">+45</td>
+                  <td class="text-right text-danger">-12</td>
+                </tr>
+                <tr>
+                  <td class="font-mono">src/auth/session.ts</td>
+                  <td class="text-right text-success">+23</td>
+                  <td class="text-right text-danger">-8</td>
+                </tr>
+                <tr>
+                  <td class="font-mono">src/utils/validate.ts</td>
+                  <td class="text-right text-success">+30</td>
+                  <td class="text-right text-danger">-15</td>
+                </tr>
+                <tr>
+                  <td class="font-mono">tests/auth.test.ts</td>
+                  <td class="text-right text-success">+22</td>
+                  <td class="text-right text-danger">-10</td>
+                </tr>
+                <tr>
+                  <td class="font-mono">README.md</td>
+                  <td class="text-right text-muted">+0</td>
+                  <td class="text-right text-muted">-0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-card">
+            <div class="table-header">
+              <span class="table-title">Local Handoff History</span>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Timestamp</th>
+                  <th>User</th>
+                  <th>Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Jan 15, 3:00 PM</td>
+                  <td>alice@acme.com</td>
+                  <td><span class="badge badge-info">TELEPORT</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jan 15, 3:45 PM</td>
+                  <td>alice@acme.com</td>
+                  <td><span class="badge badge-gray">OPEN_IN_CLI</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+      // Show selected tab
+      document.getElementById(tabName + '-tab').style.display = 'block';
+      event.target.classList.add('active');
+    }
+
+    function switchRole(role) {
+      const orgSelector = document.querySelector('.org-selector-wrapper');
+      const globalNav = document.querySelector('.super-admin-only');
+      const userInfo = document.querySelector('.user-info');
+
+      const roles = {
+        member: { name: 'Alice Member', role: 'MEMBER', showOrgSelector: false, showGlobal: false },
+        manager: { name: 'Bob Manager', role: 'MANAGER', showOrgSelector: false, showGlobal: false },
+        admin: { name: 'Carol Admin', role: 'ORG_ADMIN', showOrgSelector: false, showGlobal: false },
+        support: { name: 'Eve Support', role: 'SUPPORT', showOrgSelector: true, showGlobal: false },
+        super: { name: 'Frank Super', role: 'SUPER_ADMIN', showOrgSelector: true, showGlobal: true }
+      };
+
+      const r = roles[role];
+      userInfo.innerHTML = `<div class="user-name">${r.name}</div><div class="user-role">${r.role}</div>`;
+      document.querySelector('.user-avatar').textContent = r.name.split(' ').map(n => n[0]).join('');
+
+      orgSelector.style.display = r.showOrgSelector ? 'block' : 'none';
+      globalNav.style.display = r.showGlobal ? 'block' : 'none';
+    }
+
+    switchRole('admin');
+  </script>
+</body>
+</html>

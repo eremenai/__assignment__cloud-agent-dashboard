@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Detail - Agent Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">A</span>
+        Agent Analytics
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="overview.html" class="nav-item">
+            <span class="icon">📊</span>
+            Overview
+          </a>
+          <a href="sessions.html" class="nav-item">
+            <span class="icon">📋</span>
+            Sessions
+          </a>
+          <a href="users.html" class="nav-item active">
+            <span class="icon">👥</span>
+            Users
+          </a>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-section super-admin-only" style="display: none;">
+          <a href="global.html" class="nav-item">
+            <span class="icon">🌐</span>
+            Global
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <nav class="breadcrumb">
+            <a href="users.html">Users</a>
+            <span class="separator">›</span>
+            <span class="current">alice@acme.com</span>
+          </nav>
+        </div>
+        <div class="header-right">
+          <div class="dropdown org-selector-wrapper" style="display: none;">
+            <button class="dropdown-trigger">
+              Acme Corp <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="dropdown">
+            <button class="dropdown-trigger">
+              Last 7 days <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="user-menu">
+            <div class="user-avatar">CA</div>
+            <div class="user-info">
+              <div class="user-name">Carol Admin</div>
+              <div class="user-role">ORG_ADMIN</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- Role Switcher (Dev Mode) -->
+        <div class="role-switcher">
+          <label>Dev Mode - Switch User:</label>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice Member (MEMBER)</option>
+            <option value="manager">Bob Manager (MANAGER)</option>
+            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
+            <option value="support">Eve Support (SUPPORT)</option>
+            <option value="super">Frank Super (SUPER_ADMIN)</option>
+          </select>
+        </div>
+
+        <!-- User Header -->
+        <div class="user-header-card">
+          <div class="user-header-avatar">AM</div>
+          <div class="user-header-info">
+            <div class="user-header-name">
+              Alice Member
+              <span class="badge badge-gray" style="margin-left: 8px;">MEMBER</span>
+            </div>
+            <div class="user-header-email">alice@acme.com</div>
+            <div class="user-header-meta">
+              <span>Member since: Jan 1, 2024</span>
+              <span>Last active: 2 hours ago</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-label">Sessions</div>
+            <div class="kpi-value">12</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Runs</div>
+            <div class="kpi-value">28</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Runs/Session</div>
+            <div class="kpi-value">2.3</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Active Time</div>
+            <div class="kpi-value">4h 32m</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Lifespan</div>
+            <div class="kpi-value">18m</div>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-label">Handoff Rate</div>
+            <div class="kpi-value">25%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Post-Handoff Iter.</div>
+            <div class="kpi-value">8%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Success Rate</div>
+            <div class="kpi-value">92%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Cost</div>
+            <div class="kpi-value">$156.78</div>
+          </div>
+        </div>
+
+        <!-- Trends Section -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Activity Over Time</span>
+            </div>
+            <div class="chart-placeholder">
+              [Dual-line chart: Runs + Sessions over time]
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Cost Over Time</span>
+              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
+                <option>Daily</option>
+                <option>Cumulative</option>
+              </select>
+            </div>
+            <div class="chart-placeholder">
+              [Line chart: Cost over time]
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-row" style="grid-template-columns: 1fr;">
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Friction Over Time</span>
+            </div>
+            <div class="chart-placeholder">
+              [Dual-line chart: Runs/Session + Handoff Rate over time]
+            </div>
+          </div>
+        </div>
+
+        <!-- User's Sessions Table -->
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Sessions</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Session ID</th>
+                <th class="sortable">Started ↓</th>
+                <th class="sortable">Lifespan</th>
+                <th class="sortable">Active Time</th>
+                <th class="sortable">Runs</th>
+                <th class="sortable">Handoffs</th>
+                <th>Post-H</th>
+                <th class="sortable">Success</th>
+                <th class="sortable text-right">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td class="font-mono">#abc123def</td>
+                <td>Jan 15, 2:34 PM</td>
+                <td>45m</td>
+                <td>12m 5s</td>
+                <td>8</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">Yes</span></td>
+                <td>75%</td>
+                <td class="text-right font-bold">$34.56</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td class="font-mono">#ghi789jkl</td>
+                <td>Jan 14, 4:22 PM</td>
+                <td>18m</td>
+                <td>4m 32s</td>
+                <td>4</td>
+                <td>1</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$12.34</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td class="font-mono">#stu901vwx</td>
+                <td>Jan 12, 3:15 PM</td>
+                <td>12m</td>
+                <td>3m 10s</td>
+                <td>2</td>
+                <td>0</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$6.78</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td class="font-mono">#xyz567abc</td>
+                <td>Jan 11, 10:45 AM</td>
+                <td>25m</td>
+                <td>6m 20s</td>
+                <td>3</td>
+                <td>0</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$9.12</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td class="font-mono">#def234ghi</td>
+                <td>Jan 10, 2:00 PM</td>
+                <td>35m</td>
+                <td>8m 45s</td>
+                <td>5</td>
+                <td>1</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>80%</td>
+                <td class="text-right font-bold">$15.67</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td class="font-mono">#jkl890mno</td>
+                <td>Jan 9, 11:30 AM</td>
+                <td>15m</td>
+                <td>4m 10s</td>
+                <td>3</td>
+                <td>0</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$8.23</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination">
+            <div class="pagination-info">
+              Page 1 of 2 (12 total)
+            </div>
+            <div class="pagination-controls">
+              <select class="filter-select" style="width: auto; padding: 4px 8px;">
+                <option>10 / page</option>
+                <option>25 / page</option>
+                <option>50 / page</option>
+              </select>
+              <button class="pagination-btn" disabled>← Prev</button>
+              <button class="pagination-btn">Next →</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchRole(role) {
+      const orgSelector = document.querySelector('.org-selector-wrapper');
+      const globalNav = document.querySelector('.super-admin-only');
+      const userInfo = document.querySelector('.user-info');
+
+      const roles = {
+        member: { name: 'Alice Member', role: 'MEMBER', showOrgSelector: false, showGlobal: false },
+        manager: { name: 'Bob Manager', role: 'MANAGER', showOrgSelector: false, showGlobal: false },
+        admin: { name: 'Carol Admin', role: 'ORG_ADMIN', showOrgSelector: false, showGlobal: false },
+        support: { name: 'Eve Support', role: 'SUPPORT', showOrgSelector: true, showGlobal: false },
+        super: { name: 'Frank Super', role: 'SUPER_ADMIN', showOrgSelector: true, showGlobal: true }
+      };
+
+      const r = roles[role];
+      userInfo.innerHTML = `<div class="user-name">${r.name}</div><div class="user-role">${r.role}</div>`;
+      document.querySelector('.user-avatar').textContent = r.name.split(' ').map(n => n[0]).join('');
+
+      orgSelector.style.display = r.showOrgSelector ? 'block' : 'none';
+      globalNav.style.display = r.showGlobal ? 'block' : 'none';
+    }
+
+    switchRole('admin');
+  </script>
+</body>
+</html>

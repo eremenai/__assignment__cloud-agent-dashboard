@@ -14,17 +14,22 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 
 ---
 
-## Phase 1: Wireframes & UI Design
+## Phase 1: Wireframes & UI Design ✅
 **Goal:** Define the visual structure and component hierarchy for all dashboard views.
 
 **Deliverables:**
-- [ ] `.ai/wireframes/00-layout.md` - Shared layout, navigation, org selector, time range selector
-- [ ] `.ai/wireframes/01-org-overview.md` - Org-level KPI dashboard
-- [ ] `.ai/wireframes/02-sessions-list.md` - Sessions table with filters
-- [ ] `.ai/wireframes/03-session-detail.md` - Timeline + run details view
-- [ ] `.ai/wireframes/04-global-overview.md` - Cross-org view for SUPER_ADMIN
-- [ ] `.ai/wireframes/05-users.md` - Users comparison table with friction metrics
-- [ ] `.ai/wireframes/06-user-detail.md` - Individual user analytics and sessions
+- [x] `.ai/wireframes/00-layout.md` - Shared layout, navigation, org selector, time range selector
+- [x] `.ai/wireframes/01-org-overview.md` - Org-level KPI dashboard
+- [x] `.ai/wireframes/02-sessions-list.md` - Sessions table with filters
+- [x] `.ai/wireframes/03-session-detail.md` - Timeline + run details view
+- [x] `.ai/wireframes/04-global-overview.md` - Cross-org view for SUPER_ADMIN
+- [x] `.ai/wireframes/05-users.md` - Users comparison table with friction metrics
+- [x] `.ai/wireframes/06-user-detail.md` - Individual user analytics and sessions
+
+**Bonus deliverables:**
+- [x] `.ai/wireframes/html/` - Interactive HTML prototype with all pages
+- [x] Role switcher to preview MEMBER/MANAGER/ORG_ADMIN/SUPPORT/SUPER_ADMIN views
+- [x] Working navigation links between all pages
 
 **Format:** Each wireframe includes:
 1. ASCII diagram (quick visual reference)

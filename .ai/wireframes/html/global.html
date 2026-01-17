@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Overview - Agent Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">A</span>
+        Agent Analytics
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section org-scoped-nav">
+          <a href="overview.html" class="nav-item">
+            <span class="icon">📊</span>
+            Overview
+          </a>
+          <a href="sessions.html" class="nav-item">
+            <span class="icon">📋</span>
+            Sessions
+          </a>
+          <a href="users.html" class="nav-item">
+            <span class="icon">👥</span>
+            Users
+          </a>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-section">
+          <a href="global.html" class="nav-item active">
+            <span class="icon">🌐</span>
+            Global
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <nav class="breadcrumb">
+            <span class="current">Global Overview</span>
+          </nav>
+        </div>
+        <div class="header-right">
+          <div class="dropdown">
+            <button class="dropdown-trigger">
+              All Organizations <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="dropdown">
+            <button class="dropdown-trigger">
+              Last 7 days <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="user-menu">
+            <div class="user-avatar">FS</div>
+            <div class="user-info">
+              <div class="user-name">Frank Super</div>
+              <div class="user-role">SUPER_ADMIN</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- Role Switcher (Dev Mode) -->
+        <div class="role-switcher">
+          <label>Dev Mode - Switch User:</label>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice Member (MEMBER)</option>
+            <option value="manager">Bob Manager (MANAGER)</option>
+            <option value="admin">Carol Admin (ORG_ADMIN)</option>
+            <option value="support">Eve Support (SUPPORT)</option>
+            <option value="super" selected>Frank Super (SUPER_ADMIN)</option>
+          </select>
+          <span style="margin-left: 16px; color: #856404;">
+            Note: Only SUPER_ADMIN can access this page
+          </span>
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title">Global Overview</h1>
+        </div>
+
+        <!-- Global KPI Row -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Organizations</div>
+            <div class="kpi-value">24</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Runs</div>
+            <div class="kpi-value">
+              12,345
+              <span class="kpi-trend up">↑ 8%</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Platform Success Rate</div>
+            <div class="kpi-value">
+              93.5%
+              <span class="kpi-trend down">↓ 1%</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Cost</div>
+            <div class="kpi-value">
+              $45,678
+              <span class="kpi-trend up">↑ 12%</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Tokens</div>
+            <div class="kpi-value">89M</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Active Users</div>
+            <div class="kpi-value">
+              342
+              <span class="kpi-trend up">↑ 5%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Platform Trends -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Platform Usage</span>
+            </div>
+            <div class="chart-placeholder">
+              [Stacked area chart: Runs by org over time]
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Platform Cost</span>
+              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
+                <option>Total Cost</option>
+                <option>Per-Run Cost</option>
+              </select>
+            </div>
+            <div class="chart-placeholder">
+              [Stacked area chart: Cost by org over time]
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Organizations Table -->
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Top Organizations by Usage</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="text-muted" style="font-size: 12px;">Sort by:</span>
+              <select class="filter-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
+                <option>Cost</option>
+                <option>Runs</option>
+                <option>Users</option>
+                <option>Sessions</option>
+              </select>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Organization</th>
+                <th class="sortable">Users</th>
+                <th class="sortable">Sessions</th>
+                <th class="sortable">Runs</th>
+                <th class="sortable">Success %</th>
+                <th class="sortable">Runs/Sess</th>
+                <th class="sortable">Handoff %</th>
+                <th class="sortable text-right">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="clickable" onclick="location.href='overview.html'">
+                <td>
+                  <div class="font-bold">Acme Corp</div>
+                </td>
+                <td>45</td>
+                <td>234</td>
+                <td>1,234</td>
+                <td>95.2%</td>
+                <td>2.1</td>
+                <td>28%</td>
+                <td class="text-right font-bold">$12,345</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='overview.html'">
+                <td>
+                  <div class="font-bold">Globex Inc</div>
+                </td>
+                <td>32</td>
+                <td>156</td>
+                <td>890</td>
+                <td>91.0%</td>
+                <td>3.4</td>
+                <td>45%</td>
+                <td class="text-right font-bold">$8,901</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='overview.html'">
+                <td>
+                  <div class="font-bold">Initech</div>
+                </td>
+                <td>28</td>
+                <td>123</td>
+                <td>567</td>
+                <td style="color: var(--accent-danger);">88.5%</td>
+                <td>2.8</td>
+                <td style="color: var(--accent-warning);">52%</td>
+                <td class="text-right font-bold">$5,678</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='overview.html'">
+                <td>
+                  <div class="font-bold">Umbrella Co</div>
+                </td>
+                <td>15</td>
+                <td>89</td>
+                <td>345</td>
+                <td>97.1%</td>
+                <td>1.8</td>
+                <td>15%</td>
+                <td class="text-right font-bold">$3,456</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='overview.html'">
+                <td>
+                  <div class="font-bold">Stark Industries</div>
+                </td>
+                <td>22</td>
+                <td>78</td>
+                <td>312</td>
+                <td>94.8%</td>
+                <td>2.0</td>
+                <td>22%</td>
+                <td class="text-right font-bold">$2,890</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='overview.html'">
+                <td>
+                  <div class="font-bold">Wayne Enterprises</div>
+                </td>
+                <td>18</td>
+                <td>67</td>
+                <td>289</td>
+                <td>96.2%</td>
+                <td>1.9</td>
+                <td>18%</td>
+                <td class="text-right font-bold">$2,456</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Org Health Comparison -->
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Organization Health Comparison</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Organization</th>
+                <th style="width: 200px;">Success Rate</th>
+                <th>Avg Runs/Session</th>
+                <th>Handoff Rate</th>
+                <th>Trend (WoW)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-bold">Acme Corp</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>95.2%</span>
+                    <div class="org-comparison-bar" style="flex: 1;">
+                      <div class="org-comparison-fill" style="width: 95.2%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>2.1</td>
+                <td>28%</td>
+                <td><span class="text-success">↗ Improving</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Globex Inc</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>91.0%</span>
+                    <div class="org-comparison-bar" style="flex: 1;">
+                      <div class="org-comparison-fill" style="width: 91%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>3.4</td>
+                <td>45%</td>
+                <td><span class="text-success">↗ Improving</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Initech</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: var(--accent-danger);">88.5%</span>
+                    <div class="org-comparison-bar" style="flex: 1;">
+                      <div class="org-comparison-fill" style="width: 88.5%; background: var(--accent-danger);"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>2.8</td>
+                <td style="color: var(--accent-warning);">52%</td>
+                <td><span class="text-danger">↘ Declining</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Umbrella Co</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>97.1%</span>
+                    <div class="org-comparison-bar" style="flex: 1;">
+                      <div class="org-comparison-fill" style="width: 97.1%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>1.8</td>
+                <td>15%</td>
+                <td><span class="text-muted">→ Stable</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Stark Industries</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>94.8%</span>
+                    <div class="org-comparison-bar" style="flex: 1;">
+                      <div class="org-comparison-fill" style="width: 94.8%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>2.0</td>
+                <td>22%</td>
+                <td><span class="text-success">↗ Improving</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Wayne Enterprises</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>96.2%</span>
+                    <div class="org-comparison-bar" style="flex: 1;">
+                      <div class="org-comparison-fill" style="width: 96.2%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>1.9</td>
+                <td>18%</td>
+                <td><span class="text-muted">→ Stable</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchRole(role) {
+      const userInfo = document.querySelector('.user-info');
+      const orgScopedNav = document.querySelector('.org-scoped-nav');
+
+      const roles = {
+        member: { name: 'Alice Member', role: 'MEMBER' },
+        manager: { name: 'Bob Manager', role: 'MANAGER' },
+        admin: { name: 'Carol Admin', role: 'ORG_ADMIN' },
+        support: { name: 'Eve Support', role: 'SUPPORT' },
+        super: { name: 'Frank Super', role: 'SUPER_ADMIN' }
+      };
+
+      const r = roles[role];
+      userInfo.innerHTML = `<div class="user-name">${r.name}</div><div class="user-role">${r.role}</div>`;
+      document.querySelector('.user-avatar').textContent = r.name.split(' ').map(n => n[0]).join('');
+
+      // Show warning and redirect hint for non-SUPER_ADMIN
+      if (role !== 'super') {
+        alert('Only SUPER_ADMIN can access Global Overview. In a real app, you would be redirected to /dashboard.');
+      }
+    }
+  </script>
+</body>
+</html>

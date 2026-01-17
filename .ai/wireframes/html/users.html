@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users - Agent Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">A</span>
+        Agent Analytics
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="overview.html" class="nav-item">
+            <span class="icon">📊</span>
+            Overview
+          </a>
+          <a href="sessions.html" class="nav-item">
+            <span class="icon">📋</span>
+            Sessions
+          </a>
+          <a href="users.html" class="nav-item active">
+            <span class="icon">👥</span>
+            Users
+          </a>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-section super-admin-only" style="display: none;">
+          <a href="global.html" class="nav-item">
+            <span class="icon">🌐</span>
+            Global
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <nav class="breadcrumb">
+            <span class="current">Users</span>
+          </nav>
+        </div>
+        <div class="header-right">
+          <div class="dropdown org-selector-wrapper" style="display: none;">
+            <button class="dropdown-trigger">
+              Acme Corp <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="dropdown">
+            <button class="dropdown-trigger">
+              Last 7 days <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="user-menu">
+            <div class="user-avatar">CA</div>
+            <div class="user-info">
+              <div class="user-name">Carol Admin</div>
+              <div class="user-role">ORG_ADMIN</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- Role Switcher (Dev Mode) -->
+        <div class="role-switcher">
+          <label>Dev Mode - Switch User:</label>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice Member (MEMBER)</option>
+            <option value="manager">Bob Manager (MANAGER)</option>
+            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
+            <option value="support">Eve Support (SUPPORT)</option>
+            <option value="super">Frank Super (SUPER_ADMIN)</option>
+          </select>
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title">Users</h1>
+          <button class="btn btn-secondary">
+            <span>↓</span> Export CSV
+          </button>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="filters-bar">
+          <input type="text" class="filter-input" placeholder="Search user name or email...">
+          <button class="btn btn-text">Clear</button>
+        </div>
+
+        <!-- Summary Strip -->
+        <div class="summary-strip">
+          <div class="summary-item">
+            <span class="summary-value">45</span> users
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">234</span> total sessions
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">$12,345</span> total cost
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">34%</span> avg handoff rate
+          </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th class="sortable">Sessions</th>
+                <th class="sortable">Runs</th>
+                <th class="sortable">Runs/Sess</th>
+                <th class="sortable">Avg Active</th>
+                <th class="sortable">Avg Lifespan</th>
+                <th class="sortable">Handoff %</th>
+                <th class="sortable">Post-H %</th>
+                <th class="sortable">Success</th>
+                <th class="sortable text-right">Cost</th>
+                <th class="sortable text-right">Cost/Run</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="clickable" onclick="location.href='user-detail.html'">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">BM</div>
+                    <div>
+                      <div class="font-bold">Bob Manager</div>
+                      <div class="text-muted" style="font-size: 11px;">bob@acme.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge badge-info">MANAGER</span></td>
+                <td>18</td>
+                <td>54</td>
+                <td>3.0</td>
+                <td>6h 15m</td>
+                <td>25m</td>
+                <td style="color: var(--accent-warning);">50%</td>
+                <td>22%</td>
+                <td>87%</td>
+                <td class="text-right font-bold">$234.56</td>
+                <td class="text-right">$4.34</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='user-detail.html'">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">AM</div>
+                    <div>
+                      <div class="font-bold">Alice Member</div>
+                      <div class="text-muted" style="font-size: 11px;">alice@acme.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge badge-gray">MEMBER</span></td>
+                <td>12</td>
+                <td>28</td>
+                <td>2.3</td>
+                <td>4h 32m</td>
+                <td>18m</td>
+                <td>25%</td>
+                <td>8%</td>
+                <td>92%</td>
+                <td class="text-right font-bold">$156.78</td>
+                <td class="text-right">$5.60</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='user-detail.html'">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">CA</div>
+                    <div>
+                      <div class="font-bold">Carol Admin</div>
+                      <div class="text-muted" style="font-size: 11px;">carol@acme.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge" style="background: #e2d5f1; color: #6f42c1;">ORG_ADMIN</span></td>
+                <td>15</td>
+                <td>22</td>
+                <td>1.5</td>
+                <td>2h 45m</td>
+                <td>12m</td>
+                <td>13%</td>
+                <td>0%</td>
+                <td>100%</td>
+                <td class="text-right font-bold">$98.45</td>
+                <td class="text-right">$4.47</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='user-detail.html'">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">DM</div>
+                    <div>
+                      <div class="font-bold">Dan Member</div>
+                      <div class="text-muted" style="font-size: 11px;">dan@acme.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge badge-gray">MEMBER</span></td>
+                <td>6</td>
+                <td>18</td>
+                <td>3.0</td>
+                <td>3h 20m</td>
+                <td>32m</td>
+                <td style="color: var(--accent-danger);">67%</td>
+                <td style="color: var(--accent-warning);">33%</td>
+                <td style="color: var(--accent-danger);">78%</td>
+                <td class="text-right font-bold">$87.65</td>
+                <td class="text-right">$4.87</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='user-detail.html'">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">EM</div>
+                    <div>
+                      <div class="font-bold">Eve Member</div>
+                      <div class="text-muted" style="font-size: 11px;">eve@acme.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge badge-gray">MEMBER</span></td>
+                <td>10</td>
+                <td>15</td>
+                <td>1.5</td>
+                <td>2h 10m</td>
+                <td>14m</td>
+                <td>20%</td>
+                <td>10%</td>
+                <td>93%</td>
+                <td class="text-right font-bold">$76.54</td>
+                <td class="text-right">$5.10</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='user-detail.html'">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">FM</div>
+                    <div>
+                      <div class="font-bold">Frank Member</div>
+                      <div class="text-muted" style="font-size: 11px;">frank@acme.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge badge-gray">MEMBER</span></td>
+                <td>8</td>
+                <td>12</td>
+                <td>1.5</td>
+                <td>1h 45m</td>
+                <td>10m</td>
+                <td>12%</td>
+                <td>0%</td>
+                <td>100%</td>
+                <td class="text-right font-bold">$54.32</td>
+                <td class="text-right">$4.53</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination">
+            <div class="pagination-info">
+              Page 1 of 3 (45 total)
+            </div>
+            <div class="pagination-controls">
+              <select class="filter-select" style="width: auto; padding: 4px 8px;">
+                <option>25 / page</option>
+                <option>50 / page</option>
+                <option>100 / page</option>
+              </select>
+              <button class="pagination-btn" disabled>← Prev</button>
+              <button class="pagination-btn">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchRole(role) {
+      const orgSelector = document.querySelector('.org-selector-wrapper');
+      const globalNav = document.querySelector('.super-admin-only');
+      const userInfo = document.querySelector('.user-info');
+
+      const roles = {
+        member: { name: 'Alice Member', role: 'MEMBER', showOrgSelector: false, showGlobal: false },
+        manager: { name: 'Bob Manager', role: 'MANAGER', showOrgSelector: false, showGlobal: false },
+        admin: { name: 'Carol Admin', role: 'ORG_ADMIN', showOrgSelector: false, showGlobal: false },
+        support: { name: 'Eve Support', role: 'SUPPORT', showOrgSelector: true, showGlobal: false },
+        super: { name: 'Frank Super', role: 'SUPER_ADMIN', showOrgSelector: true, showGlobal: true }
+      };
+
+      const r = roles[role];
+      userInfo.innerHTML = `<div class="user-name">${r.name}</div><div class="user-role">${r.role}</div>`;
+      document.querySelector('.user-avatar').textContent = r.name.split(' ').map(n => n[0]).join('');
+
+      orgSelector.style.display = r.showOrgSelector ? 'block' : 'none';
+      globalNav.style.display = r.showGlobal ? 'block' : 'none';
+    }
+
+    switchRole('admin');
+  </script>
+</body>
+</html>

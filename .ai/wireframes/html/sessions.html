@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sessions - Agent Analytics</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">A</span>
+        Agent Analytics
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="overview.html" class="nav-item">
+            <span class="icon">📊</span>
+            Overview
+          </a>
+          <a href="sessions.html" class="nav-item active">
+            <span class="icon">📋</span>
+            Sessions
+          </a>
+          <a href="users.html" class="nav-item">
+            <span class="icon">👥</span>
+            Users
+          </a>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-section super-admin-only" style="display: none;">
+          <a href="global.html" class="nav-item">
+            <span class="icon">🌐</span>
+            Global
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <nav class="breadcrumb">
+            <span class="current">Sessions</span>
+          </nav>
+        </div>
+        <div class="header-right">
+          <div class="dropdown org-selector-wrapper" style="display: none;">
+            <button class="dropdown-trigger">
+              Acme Corp <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="dropdown">
+            <button class="dropdown-trigger">
+              Last 7 days <span class="chevron">▼</span>
+            </button>
+          </div>
+          <div class="user-menu">
+            <div class="user-avatar">CA</div>
+            <div class="user-info">
+              <div class="user-name">Carol Admin</div>
+              <div class="user-role">ORG_ADMIN</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- Role Switcher (Dev Mode) -->
+        <div class="role-switcher">
+          <label>Dev Mode - Switch User:</label>
+          <select id="role-select" onchange="switchRole(this.value)">
+            <option value="member">Alice Member (MEMBER)</option>
+            <option value="manager">Bob Manager (MANAGER)</option>
+            <option value="admin" selected>Carol Admin (ORG_ADMIN)</option>
+            <option value="support">Eve Support (SUPPORT)</option>
+            <option value="super">Frank Super (SUPER_ADMIN)</option>
+          </select>
+        </div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title">Sessions</h1>
+          <button class="btn btn-secondary">
+            <span>↓</span> Export CSV
+          </button>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="filters-bar">
+          <input type="text" class="filter-input" placeholder="Search session ID...">
+          <select class="filter-select">
+            <option>Status: All</option>
+            <option>Has Failures</option>
+            <option>All Succeeded</option>
+          </select>
+          <select class="filter-select">
+            <option>Duration: Any</option>
+            <option>&lt; 5m</option>
+            <option>5m - 30m</option>
+            <option>30m - 1h</option>
+            <option>&gt; 1h</option>
+          </select>
+          <select class="filter-select">
+            <option>Cost: Any</option>
+            <option>&lt; $10</option>
+            <option>$10 - $50</option>
+            <option>$50 - $100</option>
+            <option>&gt; $100</option>
+          </select>
+          <select class="filter-select">
+            <option>Handoff: Any</option>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+          <select class="filter-select">
+            <option>Post-Handoff: Any</option>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+          <button class="btn btn-text">Clear</button>
+        </div>
+
+        <!-- Summary Strip -->
+        <div class="summary-strip">
+          <div class="summary-item">
+            <span class="summary-value">234</span> sessions
+          </div>
+          <div class="summary-item">
+            Avg <span class="summary-value">2.3</span> runs/sess
+          </div>
+          <div class="summary-item">
+            Avg <span class="summary-value">4m 32s</span> active
+          </div>
+          <div class="summary-item">
+            Avg <span class="summary-value">18m</span> lifespan
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">34%</span> handoff rate
+          </div>
+        </div>
+
+        <!-- Sessions Table -->
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"><input type="checkbox"></th>
+                <th>Session ID</th>
+                <th class="created-by-col">Created By</th>
+                <th class="sortable">Started ↓</th>
+                <th class="sortable">Lifespan</th>
+                <th class="sortable">Active Time</th>
+                <th class="sortable">Runs</th>
+                <th class="sortable">Handoffs</th>
+                <th>Post-H</th>
+                <th class="sortable">Success</th>
+                <th class="sortable text-right">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#abc123def</td>
+                <td class="created-by-col">alice@acme.com</td>
+                <td>Jan 15, 2:34 PM</td>
+                <td>45m</td>
+                <td>12m 5s</td>
+                <td>8</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">Yes</span></td>
+                <td>75%</td>
+                <td class="text-right font-bold">$34.56</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#def456ghi</td>
+                <td class="created-by-col">bob@acme.com</td>
+                <td>Jan 15, 10:15 AM</td>
+                <td>1h 15m</td>
+                <td>28m</td>
+                <td>12</td>
+                <td>3</td>
+                <td><span class="badge badge-warning">Yes</span></td>
+                <td>83%</td>
+                <td class="text-right font-bold">$28.90</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#ghi789jkl</td>
+                <td class="created-by-col">alice@acme.com</td>
+                <td>Jan 14, 4:22 PM</td>
+                <td>18m</td>
+                <td>4m 32s</td>
+                <td>4</td>
+                <td>1</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$12.34</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#jkl012mno</td>
+                <td class="created-by-col">carol@acme.com</td>
+                <td>Jan 14, 2:10 PM</td>
+                <td>35m</td>
+                <td>8m 15s</td>
+                <td>6</td>
+                <td>0</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$11.20</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#mno345pqr</td>
+                <td class="created-by-col">bob@acme.com</td>
+                <td>Jan 13, 11:45 AM</td>
+                <td>22m</td>
+                <td>5m 45s</td>
+                <td>3</td>
+                <td>0</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>67%</td>
+                <td class="text-right font-bold">$9.80</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#pqr678stu</td>
+                <td class="created-by-col">dan@acme.com</td>
+                <td>Jan 13, 9:30 AM</td>
+                <td>55m</td>
+                <td>15m 20s</td>
+                <td>7</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">Yes</span></td>
+                <td>86%</td>
+                <td class="text-right font-bold">$8.45</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#stu901vwx</td>
+                <td class="created-by-col">alice@acme.com</td>
+                <td>Jan 12, 3:15 PM</td>
+                <td>12m</td>
+                <td>3m 10s</td>
+                <td>2</td>
+                <td>0</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>100%</td>
+                <td class="text-right font-bold">$6.78</td>
+              </tr>
+              <tr class="clickable" onclick="location.href='session-detail.html'">
+                <td><input type="checkbox"></td>
+                <td class="font-mono">#vwx234yza</td>
+                <td class="created-by-col">carol@acme.com</td>
+                <td>Jan 12, 11:00 AM</td>
+                <td>28m</td>
+                <td>6m 45s</td>
+                <td>4</td>
+                <td>1</td>
+                <td><span class="badge badge-gray">No</span></td>
+                <td>75%</td>
+                <td class="text-right font-bold">$5.90</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination">
+            <div class="pagination-info">
+              Page 1 of 24 (234 total)
+            </div>
+            <div class="pagination-controls">
+              <select class="filter-select" style="width: auto; padding: 4px 8px;">
+                <option>25 / page</option>
+                <option>50 / page</option>
+                <option>100 / page</option>
+              </select>
+              <button class="pagination-btn" disabled>← Prev</button>
+              <button class="pagination-btn">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchRole(role) {
+      const orgSelector = document.querySelector('.org-selector-wrapper');
+      const globalNav = document.querySelector('.super-admin-only');
+      const userInfo = document.querySelector('.user-info');
+      const createdByCols = document.querySelectorAll('.created-by-col');
+
+      const roles = {
+        member: { name: 'Alice Member', role: 'MEMBER', showOrgSelector: false, showGlobal: false, showCreatedBy: false },
+        manager: { name: 'Bob Manager', role: 'MANAGER', showOrgSelector: false, showGlobal: false, showCreatedBy: true },
+        admin: { name: 'Carol Admin', role: 'ORG_ADMIN', showOrgSelector: false, showGlobal: false, showCreatedBy: true },
+        support: { name: 'Eve Support', role: 'SUPPORT', showOrgSelector: true, showGlobal: false, showCreatedBy: true },
+        super: { name: 'Frank Super', role: 'SUPER_ADMIN', showOrgSelector: true, showGlobal: true, showCreatedBy: true }
+      };
+
+      const r = roles[role];
+      userInfo.innerHTML = `<div class="user-name">${r.name}</div><div class="user-role">${r.role}</div>`;
+      document.querySelector('.user-avatar').textContent = r.name.split(' ').map(n => n[0]).join('');
+
+      orgSelector.style.display = r.showOrgSelector ? 'block' : 'none';
+      globalNav.style.display = r.showGlobal ? 'block' : 'none';
+
+      createdByCols.forEach(col => {
+        col.style.display = r.showCreatedBy ? '' : 'none';
+      });
+    }
+
+    switchRole('admin');
+  </script>
+</body>
+</html>
