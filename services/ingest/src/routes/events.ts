@@ -5,10 +5,17 @@
  * Receives a batch of events and stores them in events_raw + events_queue.
  */
 
-import { getDb } from "@repo/shared/db/client";
+import type { getDb } from "@repo/shared/db/client";
 import { eventsQueue, eventsRaw } from "@repo/shared/db/schema";
 import { ingestRequestSchema, type IngestError, type IngestResponse } from "@repo/shared/schemas";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+
+// Type augmentation for Fastify db decorator
+declare module "fastify" {
+  interface FastifyInstance {
+    db: ReturnType<typeof getDb>;
+  }
+}
 
 const MAX_BATCH_SIZE = 100;
 
@@ -50,55 +57,32 @@ export async function eventsRoute(fastify: FastifyInstance) {
       } satisfies IngestResponse);
     }
 
-    const db = getDb();
-    const acceptedIds: string[] = [];
-    const errors: IngestError[] = [];
+    const db = fastify.db;
 
-    // Insert events in a transaction
+    // Prepare batch data
+    const rawValues = events.map((event) => ({
+      org_id: event.org_id,
+      event_id: event.event_id,
+      occurred_at: new Date(event.occurred_at),
+      event_type: event.event_type,
+      session_id: event.session_id,
+      user_id: event.user_id,
+      run_id: event.run_id,
+      payload: event.payload as Record<string, unknown>,
+    }));
+
+    const queueValues = events.map((event) => ({
+      org_id: event.org_id,
+      event_id: event.event_id,
+    }));
+
+    // Batch insert in a transaction: first events_raw, then events_queue
     try {
       await db.transaction(async (tx) => {
-        for (let i = 0; i < events.length; i++) {
-          const event = events[i];
-
-          try {
-            // Insert into events_raw
-            await tx
-              .insert(eventsRaw)
-              .values({
-                org_id: event.org_id,
-                event_id: event.event_id,
-                occurred_at: new Date(event.occurred_at),
-                event_type: event.event_type,
-                session_id: event.session_id,
-                user_id: event.user_id,
-                run_id: event.run_id,
-                payload: event.payload as Record<string, unknown>,
-              })
-              .onConflictDoNothing();
-
-            // Insert into events_queue
-            await tx
-              .insert(eventsQueue)
-              .values({
-                org_id: event.org_id,
-                event_id: event.event_id,
-              })
-              .onConflictDoNothing();
-
-            acceptedIds.push(event.event_id);
-          } catch (error) {
-            // Log individual event errors but continue processing
-            fastify.log.warn({ event_id: event.event_id, error }, "Failed to insert event");
-            errors.push({
-              event_id: event.event_id,
-              index: i,
-              message: error instanceof Error ? error.message : "Unknown error",
-            });
-          }
-        }
+        await tx.insert(eventsRaw).values(rawValues).onConflictDoNothing();
+        await tx.insert(eventsQueue).values(queueValues).onConflictDoNothing();
       });
     } catch (error) {
-      // Transaction-level failure
       fastify.log.error(error, "Transaction failed");
       return reply.status(500).send({
         accepted: 0,
@@ -112,12 +96,13 @@ export async function eventsRoute(fastify: FastifyInstance) {
       } satisfies IngestResponse);
     }
 
+    const acceptedIds = events.map((e) => e.event_id);
+
     const duration = Date.now() - startTime;
     fastify.log.info(
       {
         accepted: acceptedIds.length,
         total: events.length,
-        errors: errors.length,
         duration_ms: duration,
       },
       "Ingested events batch"
@@ -126,7 +111,6 @@ export async function eventsRoute(fastify: FastifyInstance) {
     const response: IngestResponse = {
       accepted: acceptedIds.length,
       event_ids: acceptedIds,
-      errors: errors.length > 0 ? errors : undefined,
     };
 
     return reply.send(response);

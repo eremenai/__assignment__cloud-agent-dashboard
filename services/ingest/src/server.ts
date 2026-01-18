@@ -5,7 +5,7 @@
  * and stores them in events_raw + events_queue.
  */
 
-import { closeDb } from "@repo/shared/db/client";
+import { closeDb, getDb } from "@repo/shared/db/client";
 import Fastify from "fastify";
 import { eventsRoute } from "./routes/events.js";
 import { healthRoute } from "./routes/health.js";
@@ -18,6 +18,10 @@ const fastify = Fastify({
     level: process.env.LOG_LEVEL || "info",
   },
 });
+
+// Initialize db connection at startup and decorate fastify
+const db = getDb();
+fastify.decorate("db", db);
 
 // Register routes
 fastify.register(eventsRoute);

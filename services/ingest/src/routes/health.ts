@@ -2,16 +2,14 @@
  * Health check endpoint.
  */
 
-import { getDb } from "@repo/shared/db/client";
 import type { FastifyInstance } from "fastify";
 import { sql } from "drizzle-orm";
 
 export async function healthRoute(fastify: FastifyInstance) {
   fastify.get("/health", async (_request, reply) => {
     try {
-      // Check database connectivity
-      const db = getDb();
-      await db.execute(sql`SELECT 1`);
+      // Check database connectivity using injected db
+      await fastify.db.execute(sql`SELECT 1`);
 
       return reply.send({
         status: "healthy",
