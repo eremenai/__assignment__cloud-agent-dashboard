@@ -55,6 +55,136 @@ Event-driven architecture with **append-only event store** and **pre-computed re
 | **Mock Event Generator** | Node.js script | `generator` | - | Simulates drop-copy producer |
 | **Database** | PostgreSQL 16 | `db` | 5432 | Single instance for V1 |
 
+## Repository Structure
+
+Each process lives in its own folder at the repository root:
+
+```
+cloud_agent_dashboard/
+├── .ai/                        # Project documentation
+│   ├── BACKEND_ARCHITECTURE.md
+│   ├── TECH_STACK.md
+│   └── ...
+│
+├── packages/                   # Shared code (monorepo)
+│   └── shared/                 # Shared types, schemas, utilities
+│       ├── src/
+│       │   ├── schemas/        # Zod schemas (event envelope, etc.)
+│       │   ├── types/          # TypeScript types
+│       │   └── db/             # Drizzle schema & migrations
+│       ├── package.json
+│       └── tsconfig.json
+│
+├── services/                   # All runnable services
+│   ├── dashboard/              # Dashboard (Next.js) - port 3000
+│   │   ├── src/
+│   │   │   ├── app/            # Next.js App Router
+│   │   │   ├── components/     # React components
+│   │   │   ├── lib/            # Utilities
+│   │   │   └── server/         # Server actions, API routes
+│   │   ├── tests/              # E2E tests (Playwright)
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   ├── ingest/                 # Ingest API (Fastify) - port 3001
+│   │   ├── src/
+│   │   │   ├── server.ts       # Fastify server setup
+│   │   │   ├── routes/         # API routes
+│   │   │   └── handlers/       # Request handlers
+│   │   ├── tests/              # Unit & integration tests
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   └── worker/                 # Projection Worker (no HTTP)
+│       ├── src/
+│       │   ├── main.ts         # Entry point, loop
+│       │   ├── projections/    # Projection logic per event type
+│       │   └── queue.ts        # Queue claim/release logic
+│       ├── tests/              # Unit & integration tests
+│       ├── Dockerfile
+│       ├── package.json
+│       └── tsconfig.json
+│
+├── tools/                      # CLI tools (not long-running services)
+│   └── generator/              # Mock Event Generator
+│       ├── src/
+│       │   ├── cli.ts          # CLI entry point
+│       │   ├── generators/     # Event generation logic
+│       │   └── patterns/       # Org-specific patterns
+│       ├── tests/
+│       ├── Dockerfile
+│       ├── package.json
+│       └── tsconfig.json
+│
+├── scripts/                    # Database scripts
+│   ├── init-db.sql             # Schema creation
+│   └── seed-data.sql           # Seed data (generated)
+│
+├── docker-compose.yml          # Dev: DB only
+├── docker-compose.prod.yml     # Production-like: all services
+├── docker-compose.test.yml     # Testing: isolated env
+├── pnpm-workspace.yaml         # pnpm workspace config
+├── package.json                # Root package.json (workspace scripts)
+└── turbo.json                  # Turborepo config (optional)
+```
+
+### Workspace Configuration
+
+**pnpm-workspace.yaml:**
+```yaml
+packages:
+  - "packages/*"
+  - "services/*"
+  - "tools/*"
+```
+
+**Root package.json scripts:**
+```json
+{
+  "scripts": {
+    "dev": "pnpm --filter @repo/dashboard dev",
+    "ingest:dev": "pnpm --filter @repo/ingest dev",
+    "worker:dev": "pnpm --filter @repo/worker dev",
+    "generate": "pnpm --filter @repo/generator cli",
+    "db:generate": "pnpm --filter @repo/shared db:generate",
+    "db:migrate": "pnpm --filter @repo/shared db:migrate",
+    "db:push": "pnpm --filter @repo/shared db:push",
+    "db:studio": "pnpm --filter @repo/shared db:studio",
+    "test": "pnpm -r test",
+    "test:integration": "pnpm -r test:integration",
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build"
+  }
+}
+```
+
+### Package Names
+
+| Folder | Package Name | Description |
+|--------|--------------|-------------|
+| `packages/shared` | `@repo/shared` | Shared types, schemas, DB |
+| `services/dashboard` | `@repo/dashboard` | Next.js dashboard |
+| `services/ingest` | `@repo/ingest` | Ingest API (Fastify) |
+| `services/worker` | `@repo/worker` | Projection worker |
+| `tools/generator` | `@repo/generator` | Mock event generator CLI |
+
+### Dependencies Between Packages
+
+```
+┌─────────────────┐
+│  @repo/shared   │  ← All packages depend on this
+│  (types, DB)    │
+└────────┬────────┘
+         │
+    ┌────┴────┬──────────┬──────────┐
+    ▼         ▼          ▼          ▼
+┌────────┐ ┌────────┐ ┌────────┐ ┌──────────┐
+│dashboard│ │ingest  │ │worker  │ │generator │
+└────────┘ └────────┘ └────────┘ └──────────┘
+```
+
 ### Process Separation Rationale
 
 ```
@@ -100,24 +230,60 @@ Event-driven architecture with **append-only event store** and **pre-computed re
 - **Batch size:** 100 events per poll (configurable via `WORKER_BATCH_SIZE`)
 - Claims batch with `FOR UPDATE SKIP LOCKED`
 - Applies projection rules to `run_facts`, `session_stats`, and daily aggregates
-- Marks rows as processed
 - Handles failures with retry (increments `attempts`, records `last_error`)
 - Graceful shutdown on SIGTERM/SIGINT
 
+### Worker Processing Flow (Failure-Safe)
+
+The naive approach (single transaction for claim+process) has a flaw: if processing fails, the transaction rolls back and `attempts`/`last_error` are never recorded.
+
+**Solution:** Separate transactions for claim vs process.
+
 ```
-┌─────────────────────────────────────────────────────┐
-│  Worker Loop                                        │
-│                                                     │
-│  while (running) {                                  │
-│    1. BEGIN transaction                             │
-│    2. SELECT ... FOR UPDATE SKIP LOCKED (batch)    │
-│    3. For each event: apply projections            │
-│    4. UPDATE events_queue SET processed_at = now() │
-│    5. COMMIT                                        │
-│    6. Sleep(POLL_INTERVAL) if batch was empty      │
-│  }                                                  │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  Worker Loop                                                    │
+│                                                                 │
+│  while (running) {                                              │
+│    // PHASE 1: CLAIM (separate transaction)                    │
+│    BEGIN                                                        │
+│      claimed_ids = SELECT event_id FROM events_queue           │
+│        WHERE processed_at IS NULL                               │
+│        ORDER BY inserted_at LIMIT :batch                       │
+│        FOR UPDATE SKIP LOCKED                                   │
+│                                                                 │
+│      UPDATE events_queue                                        │
+│        SET attempts = attempts + 1                             │
+│        WHERE (org_id, event_id) IN (claimed_ids)               │
+│    COMMIT  // attempts now persisted even if processing fails  │
+│                                                                 │
+│    // PHASE 2: PROCESS (one transaction per event)             │
+│    for each (org_id, event_id) in claimed_ids:                 │
+│      try {                                                      │
+│        BEGIN                                                    │
+│          event = SELECT * FROM events_raw WHERE ...            │
+│          apply_projection(event)  // updates read models       │
+│          UPDATE events_queue SET processed_at = now() WHERE ..│
+│        COMMIT                                                   │
+│      } catch (error) {                                          │
+│        ROLLBACK                                                 │
+│        // Record error in separate transaction (won't rollback)│
+│        UPDATE events_queue                                      │
+│          SET last_error = error.message                        │
+│          WHERE (org_id, event_id) = ...                        │
+│      }                                                          │
+│                                                                 │
+│    // PHASE 3: SLEEP if nothing to do                          │
+│    if (claimed_ids.length == 0) sleep(POLL_INTERVAL)           │
+│  }                                                              │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+**Why this works:**
+- `attempts` incremented at claim time (Phase 1) - persisted before any processing
+- Each event processed in its own transaction - one failure doesn't block others
+- `last_error` recorded in separate transaction after rollback - always persisted
+- `processed_at` only set on success
+- Failed events re-claimed on next poll (with `attempts` already incremented)
 
 **Dashboard App (`:3000` - client-facing)**
 - Next.js with App Router
@@ -128,6 +294,28 @@ Event-driven architecture with **append-only event store** and **pre-computed re
 ---
 
 ## Database Schema
+
+### Schema Migrations (Drizzle Kit)
+
+We use **Drizzle Kit** for schema migrations (natural fit with Drizzle ORM).
+
+**Commands:**
+```bash
+pnpm db:generate    # Generate migration from schema changes
+pnpm db:migrate     # Apply pending migrations
+pnpm db:push        # Push schema directly (dev only, no migration files)
+pnpm db:studio      # Open Drizzle Studio (DB browser)
+```
+
+**Migration flow:**
+1. Modify Drizzle schema in `src/db/schema.ts`
+2. Run `pnpm db:generate` - creates SQL migration in `drizzle/migrations/`
+3. Run `pnpm db:migrate` - applies migration to database
+4. Commit migration files to git
+
+**On container startup:**
+- `init-db.sql` creates schema (for fresh databases)
+- Migrations applied via `pnpm db:migrate` (for existing databases)
 
 ### Support Tables (stubbed for V1)
 
@@ -349,6 +537,8 @@ WHERE org_id = :org_id
 3. **Materialized view** - Pre-compute percentiles for common date ranges (last 7d, 30d, 90d).
 
 **Recommendation:** Start with query-time. Add histogram buckets if P95 queries exceed 100ms.
+
+**Frontend UX:** P95 loaded via separate API call. UI shows skeleton/spinner while loading, then renders value. This prevents blocking the main dashboard load.
 
 ---
 
@@ -754,11 +944,17 @@ pnpm generate --days 7 --dry-run
 - Idempotent: re-running same date range skips already-generated events (via event_id)
 
 **Generated volume per simulated day:**
-| Org | Sessions | Events (approx) |
-|-----|----------|-----------------|
-| Small | 1-2 | 10-30 |
-| Medium | 5-10 | 50-150 |
-| Large | 20-30 | 200-500 |
+
+| Org | Weekday Sessions | Weekend Sessions | Events/Session |
+|-----|------------------|------------------|----------------|
+| Small | 1-2 | 0-1 | 5-15 |
+| Medium | 5-10 | 2-4 | 10-15 |
+| Large | 20-30 | 8-12 | 10-15 |
+
+**Weekend load reduction:**
+- Saturday: ~40% of weekday volume
+- Sunday: ~25% of weekday volume
+- Events distributed later in day (10am-6pm vs 8am-8pm)
 
 ### Development Workflow
 
@@ -786,24 +982,31 @@ services:
       POSTGRES_DB: analytics
       POSTGRES_USER: analytics
       POSTGRES_PASSWORD: dev_password
+    # NO VOLUME - ephemeral database, fresh on every restart
     volumes:
-      - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./scripts/seed-data.sql:/docker-entrypoint-initdb.d/02-seed.sql
     ports:
       - "5432:5432"
 
-volumes:
-  postgres_data:
+# No named volumes - database is ephemeral
 ```
 
 **Local dev commands:**
 ```bash
-docker compose up db          # Start PostgreSQL only
+docker compose up db          # Start PostgreSQL (fresh DB)
+docker compose down           # Stop (data is lost - intentional)
+pnpm db:migrate               # Apply migrations (if schema changed)
 pnpm dev                      # Dashboard (Next.js) with hot reload
 pnpm ingest:dev               # Ingest API (Fastify) with hot reload
 pnpm worker:dev               # Worker with hot reload
 ```
+
+**Why ephemeral DB for dev:**
+- Fresh state on each restart - no stale data issues
+- Seed data applied automatically via init scripts
+- Forces testing of migrations and seed scripts
+- Easy reset: just `docker compose down && docker compose up db`
 
 ### Production-like (all in containers)
 
@@ -823,8 +1026,7 @@ services:
 
   ingest:
     build:
-      context: .
-      dockerfile: Dockerfile.ingest
+      context: ./services/ingest
     environment:
       DATABASE_URL: postgres://analytics:${DB_PASSWORD}@db:5432/analytics
       PORT: 3001
@@ -835,16 +1037,17 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: Dockerfile.worker
+      context: ./services/worker
     environment:
       DATABASE_URL: postgres://analytics:${DB_PASSWORD}@db:5432/analytics
+      WORKER_POLL_INTERVAL_MS: 2000
+      WORKER_BATCH_SIZE: 100
     depends_on:
       - db
 
   dashboard:
     build:
-      context: ./dashboard-app
+      context: ./services/dashboard
     environment:
       DATABASE_URL: postgres://analytics:${DB_PASSWORD}@db:5432/analytics
     ports:
@@ -854,8 +1057,7 @@ services:
 
   generator:
     build:
-      context: .
-      dockerfile: Dockerfile.generator
+      context: ./tools/generator
     environment:
       INGEST_URL: http://ingest:3001/events
     depends_on:
@@ -869,7 +1071,27 @@ volumes:
 
 ---
 
-## Integration Tests
+## Testing Strategy
+
+### Coverage Requirements
+
+Backend **must be extensively covered by tests**. Target coverage:
+
+| Component | Unit Tests | Integration Tests | Coverage Target |
+|-----------|------------|-------------------|-----------------|
+| Ingest API | Schema validation, error handling | Full HTTP flow | 90%+ |
+| Worker | Projection logic, error paths | Queue processing | 90%+ |
+| DB Schema | - | Migration tests | 100% tables |
+| Generator | Data generation logic | - | 80%+ |
+
+**What to test:**
+- Every projection rule (each event type → each table update)
+- Error handling (invalid events, DB failures, retries)
+- Edge cases (out-of-order events, duplicates, missing fields)
+- Idempotency (same event processed twice = same result)
+- Transaction boundaries (failures don't corrupt state)
+
+### Integration Tests
 
 Integration tests verify the full ingest → worker → read model pipeline.
 
@@ -934,6 +1156,7 @@ services:
       POSTGRES_DB: analytics_test
       POSTGRES_USER: analytics
       POSTGRES_PASSWORD: test_password
+    # NO VOLUME - ephemeral test database
     volumes:
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
       # No seed data for tests - each test controls its own data
@@ -944,11 +1167,13 @@ services:
       interval: 2s
       timeout: 5s
       retries: 10
+    # tmpfs for faster tests (optional)
+    tmpfs:
+      - /var/lib/postgresql/data
 
   ingest-test:
     build:
-      context: .
-      dockerfile: Dockerfile.ingest
+      context: ./services/ingest
     environment:
       DATABASE_URL: postgres://analytics:test_password@db-test:5432/analytics_test
       PORT: 3001
@@ -960,8 +1185,7 @@ services:
 
   worker-test:
     build:
-      context: .
-      dockerfile: Dockerfile.worker
+      context: ./services/worker
     environment:
       DATABASE_URL: postgres://analytics:test_password@db-test:5432/analytics_test
       WORKER_POLL_INTERVAL_MS: 100  # Faster polling for tests
@@ -969,6 +1193,8 @@ services:
     depends_on:
       db-test:
         condition: service_healthy
+
+# No volumes - ephemeral test database
 ```
 
 ### Test Environment Variables

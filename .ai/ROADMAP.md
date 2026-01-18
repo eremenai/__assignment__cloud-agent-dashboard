@@ -257,6 +257,12 @@ See `.ai/TRADEOFFS_FUTURE_STEPS.md` for comprehensive list of:
 | Worker execution | Long-running process with 2s poll interval | 2026-01-18 |
 | Daily aggregates | org_stats_daily + user_stats_daily (totals, not averages) | 2026-01-18 |
 | Integration tests | Test full ingest → worker → read model pipeline | 2026-01-18 |
+| Schema migrations | Drizzle Kit (schema-driven) | 2026-01-18 |
+| Dev/test databases | Ephemeral (no volume), fresh on restart | 2026-01-18 |
+| Backend test coverage | Extensive - 90%+ for ingest/worker | 2026-01-18 |
+| P95 duration | Separate query, async load on frontend | 2026-01-18 |
+| Error categories | errors_tool, errors_model, errors_timeout, errors_other in daily aggregates | 2026-01-18 |
+| Repository structure | Monorepo with pnpm workspaces (packages/, services/, tools/) | 2026-01-18 |
 
 ---
 

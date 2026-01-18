@@ -21,7 +21,7 @@ This document defines the technology choices for the Agent Cloud Execution Monit
 | Icons | Lucide React | ✅ | v0.562.0 |
 | Date handling | date-fns | ✅ | v3.6.0 |
 | Linter/Formatter | Biome.js | ✅ | v2.3.8, replaces ESLint + Prettier |
-| Package manager | pnpm | ✅ | |
+| Package manager | pnpm workspaces | ✅ | Monorepo structure |
 
 ### Frontend Structure (actual)
 ```
@@ -64,6 +64,7 @@ src/
 | Language | TypeScript | ✅ | |
 | Database | PostgreSQL 16 | ✅ | Via Docker, sufficient for V1 scale |
 | ORM | Drizzle ORM | ✅ | Lightweight, SQL-like, good TypeScript DX |
+| Migrations | Drizzle Kit | ✅ | Schema-driven migrations, pairs with Drizzle ORM |
 | Validation | Zod | ✅ | Shared across all services |
 | Auth (dashboard) | Custom JWT middleware | ✅ | See AUTH_AND_ROLES.md |
 | Auth (ingest) | None (V1) | ✅ | Internal network; mTLS in production |
@@ -111,7 +112,7 @@ See `.ai/BACKEND_ARCHITECTURE.md` for full schemas.
 | Containerization | Docker | ✅ | |
 | Orchestration | Docker Compose | ✅ | Local dev/demo only for V1 |
 | Node version | 24.x | ✅ | v24.12.0 |
-| Package manager | pnpm | ✅ | |
+| Package manager | pnpm workspaces | ✅ | Monorepo structure |
 | Linting | Biome.js | ✅ | Single tool for lint + format |
 | Pre-commit | None | ✅ | Removed Husky |
 | CI/CD | GitHub Actions | ❓ | Basic lint/build/test |
