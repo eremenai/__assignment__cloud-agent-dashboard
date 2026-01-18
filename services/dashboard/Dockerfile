@@ -1,7 +1,7 @@
 # Dashboard Service Dockerfile (Next.js)
 # Multi-stage build for pnpm monorepo
 
-FROM node:22-slim AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -19,8 +19,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY services/dashboard/package.json ./services/dashboard/
 
-# Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# Install dependencies with shamefully-hoist to avoid symlinks
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --shamefully-hoist
 
 # ============================================================================
 # Stage 2: Build
@@ -28,21 +28,20 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
+# Copy only root node_modules (shamefully-hoist puts everything there)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/services/dashboard/node_modules ./services/dashboard/node_modules
 
 # Copy source files
 COPY packages/shared ./packages/shared
 COPY services/dashboard ./services/dashboard
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Build shared package first
-RUN pnpm --filter @repo/shared build
+# Build shared package first using root tsc
+RUN ./node_modules/.bin/tsc -p packages/shared/tsconfig.json
 
-# Build Next.js app
+# Build Next.js app from services/dashboard
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm --filter @repo/dashboard build
+RUN ./node_modules/.bin/next build services/dashboard
 
 # ============================================================================
 # Stage 3: Production image
@@ -65,9 +64,6 @@ COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/dashboard/.next/standalone ./
 COPY --from=builder /app/services/dashboard/.next/static ./services/dashboard/.next/static
 COPY --from=builder /app/services/dashboard/public ./services/dashboard/public
-
-# Copy node_modules for shared package
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 USER nextjs
 

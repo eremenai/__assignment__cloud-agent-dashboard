@@ -4,10 +4,12 @@
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "dev": "pnpm --filter @repo/dashboard dev",
+    "dev:local": "concurrently -k -n auth,ingest,worker,dashboard -c blue,green,yellow,magenta \"pnpm --filter @repo/mock-auth dev\" \"pnpm --filter @repo/ingest dev\" \"pnpm --filter @repo/worker dev\" \"pnpm --filter @repo/dashboard dev\"",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "test:run": "pnpm -r test:run",
+    "auth:dev": "pnpm --filter @repo/mock-auth dev",
     "ingest:dev": "pnpm --filter @repo/ingest dev",
     "worker:dev": "pnpm --filter @repo/worker dev",
     "generate": "pnpm --filter @repo/generator cli",
@@ -20,6 +22,7 @@
     "db:seed": "docker compose exec db psql -U analytics -d analytics -f /docker-entrypoint-initdb.d/02-seed.sql"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "typescript": "^5.9.3"
   }
 }

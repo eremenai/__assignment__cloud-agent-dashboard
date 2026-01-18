@@ -1,7 +1,7 @@
 # Ingest API Service Dockerfile
 # Multi-stage build for pnpm monorepo
 
-FROM node:22-slim AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -19,8 +19,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY services/ingest/package.json ./services/ingest/
 
-# Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# Install dependencies with shamefully-hoist to avoid symlinks
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --shamefully-hoist
 
 # ============================================================================
 # Stage 2: Build
@@ -28,20 +28,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
+# Copy only root node_modules (shamefully-hoist puts everything there)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/services/ingest/node_modules ./services/ingest/node_modules
 
 # Copy source files
 COPY packages/shared ./packages/shared
 COPY services/ingest ./services/ingest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Build shared package first
-RUN pnpm --filter @repo/shared build
+# Build shared package first using root tsc
+RUN ./node_modules/.bin/tsc -p packages/shared/tsconfig.json
 
 # Build ingest service
-RUN pnpm --filter @repo/ingest build
+RUN ./node_modules/.bin/tsc -p services/ingest/tsconfig.json
 
 # ============================================================================
 # Stage 3: Production image
@@ -61,10 +60,8 @@ COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/ingest/dist ./services/ingest/dist
 COPY --from=builder /app/services/ingest/package.json ./services/ingest/
 
-# Copy dependencies
+# Copy dependencies (only runtime deps from root)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/services/ingest/node_modules ./services/ingest/node_modules
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
