@@ -7,7 +7,7 @@
 
 import type { ReactNode } from "react";
 
-import { BreadcrumbsProvider, TimeRangeSelector } from "@/components/layout";
+import { BreadcrumbsProvider, OrgSelector, TimeRangeSelector } from "@/components/layout";
 import { AuthProvider } from "@/lib/auth";
 
 import { HeaderUser } from "./header-user";
@@ -31,6 +31,7 @@ export function DashboardLayoutClient({ children }: DashboardLayoutClientProps) 
 export function HeaderControls() {
   return (
     <div className="flex items-center gap-2">
+      <OrgSelector />
       <TimeRangeSelector />
       <ThemeSwitcher />
       <HeaderUser />
