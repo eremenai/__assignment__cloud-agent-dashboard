@@ -12,12 +12,14 @@ import { getUsersForOrg } from "./users";
 // ============================================================================
 
 const now = new Date();
-const NINETY_DAYS_AGO = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+const ONE_YEAR_AGO = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
 
+// Use underscore naming to match database seed data
+// Session counts scaled for 1 year of data (~4x from 90 days)
 const ORG_SESSION_COUNTS: Record<string, number> = {
-  "org-acme": 50,
-  "org-globex": 35,
-  "org-initech": 25,
+  org_small: 60, // Small startup: ~5 sessions/month
+  org_medium: 150, // Medium team: ~12 sessions/month
+  org_large: 300, // Large corp: ~25 sessions/month
 };
 
 // ============================================================================
@@ -39,7 +41,7 @@ function generateOrgData(orgId: string): GeneratedSessionData[] {
   const sessions = generateSessions({
     orgId,
     userIds,
-    startDate: NINETY_DAYS_AGO,
+    startDate: ONE_YEAR_AGO,
     endDate: now,
     count: sessionCount,
   });
@@ -65,19 +67,23 @@ function generateOrgData(orgId: string): GeneratedSessionData[] {
     });
 
     // Add handoff events to the events list
-    const handoffEvents: Event[] = handoffs.map((handoff) => ({
-      eventId: `evt-${handoff.handoffId}`,
-      sessionId: session.sessionId,
-      timestamp: handoff.timestamp,
-      type: "HANDOFF" as const,
-      actorType: "USER" as const,
-      payload: {
-        type: "HANDOFF" as const,
-        handoffId: handoff.handoffId,
-        method: handoff.method,
-        userId: handoff.userId,
-      },
-    }));
+    const handoffEvents: Event[] = handoffs
+      .filter((handoff): handoff is typeof handoff & { handoffId: string; userId: string } =>
+        Boolean(handoff.handoffId && handoff.userId)
+      )
+      .map((handoff) => ({
+        eventId: `evt-${handoff.handoffId}`,
+        sessionId: session.sessionId,
+        timestamp: handoff.timestamp,
+        type: "local_handoff" as const,
+        actorType: "user" as const,
+        payload: {
+          type: "local_handoff" as const,
+          handoffId: handoff.handoffId,
+          method: handoff.method as "teleport" | "download" | "copy_patch",
+          userId: handoff.userId,
+        },
+      }));
 
     // Merge and sort all events by timestamp
     const events = [...baseEvents, ...handoffEvents].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -91,14 +97,15 @@ function generateOrgData(orgId: string): GeneratedSessionData[] {
 // ============================================================================
 
 // Generate data once at module load
-const ACME_DATA = generateOrgData("org-acme");
-const GLOBEX_DATA = generateOrgData("org-globex");
-const INITECH_DATA = generateOrgData("org-initech");
+// Use underscore naming to match database seed data
+const SMALL_DATA = generateOrgData("org_small");
+const MEDIUM_DATA = generateOrgData("org_medium");
+const LARGE_DATA = generateOrgData("org_large");
 
 const ALL_ORG_DATA: Record<string, GeneratedSessionData[]> = {
-  "org-acme": ACME_DATA,
-  "org-globex": GLOBEX_DATA,
-  "org-initech": INITECH_DATA,
+  org_small: SMALL_DATA,
+  org_medium: MEDIUM_DATA,
+  org_large: LARGE_DATA,
 };
 
 // ============================================================================

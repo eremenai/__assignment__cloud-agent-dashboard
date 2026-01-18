@@ -15,7 +15,7 @@ interface OrgHealthTableProps {
 
 export function OrgHealthTable({ orgs }: OrgHealthTableProps) {
   // Sort by handoff rate (highest first as indicator of potential friction)
-  const sortedOrgs = [...orgs].sort((a, b) => b.localHandoffRate - a.localHandoffRate);
+  const sortedOrgs = [...orgs].sort((a, b) => (b.localHandoffRate ?? b.handoffRate ?? 0) - (a.localHandoffRate ?? a.handoffRate ?? 0));
 
   return (
     <Card>
@@ -43,14 +43,14 @@ export function OrgHealthTable({ orgs }: OrgHealthTableProps) {
                 <TableCell className="text-right">
                   <span
                     className={
-                      org.localHandoffRate >= 50
+                      (org.localHandoffRate ?? org.handoffRate ?? 0) >= 50
                         ? "font-medium text-red-600"
-                        : org.localHandoffRate >= 30
+                        : (org.localHandoffRate ?? org.handoffRate ?? 0) >= 30
                           ? "text-amber-600"
                           : "text-green-600"
                     }
                   >
-                    {formatPercent(org.localHandoffRate)}
+                    {formatPercent(org.localHandoffRate ?? org.handoffRate ?? 0)}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">

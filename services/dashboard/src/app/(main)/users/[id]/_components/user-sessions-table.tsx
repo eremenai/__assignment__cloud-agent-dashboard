@@ -53,7 +53,7 @@ export function UserSessionsTable({ sessions, userId, userName }: UserSessionsTa
         </TableHeader>
         <TableBody>
           {sessions.slice(0, 10).map((session) => {
-            const hasFailures = session.failedRunCount > 0;
+            const hasFailures = (session.failedRunCount ?? session.failedRuns ?? 0) > 0;
             return (
               <TableRow key={session.sessionId}>
                 <TableCell>
@@ -64,7 +64,7 @@ export function UserSessionsTable({ sessions, userId, userName }: UserSessionsTa
                 <TableCell className="text-muted-foreground">{formatDate(session.createdAt)}</TableCell>
                 <TableCell>{session.runCount}</TableCell>
                 <TableCell>
-                  {hasFailures ? <StatusBadge status="FAILED" /> : <StatusBadge status="SUCCEEDED" />}
+                  {hasFailures ? <StatusBadge status="fail" /> : <StatusBadge status="success" />}
                 </TableCell>
                 <TableCell>{formatDuration(session.lifespanMs)}</TableCell>
                 <TableCell className="text-right font-medium">{formatCurrency(session.totalCostCents / 100)}</TableCell>

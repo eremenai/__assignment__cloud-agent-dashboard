@@ -90,19 +90,51 @@ These roles are scoped to a single organization:
 
 ---
 
-## Dev Mode User Presets
+## Dev Mode Users
 
-For easy testing, provide these preset users in DevAuthSwitcher:
+Dev users are defined in the database, not hardcoded. The mock-auth service reads
+from the database to provide the list of available users for the DevAuthSwitcher.
 
-```typescript
-const DEV_USERS = [
-  { id: 'member-1', name: 'Alice Member', role: 'MEMBER', orgId: 'org-acme' },
-  { id: 'manager-1', name: 'Bob Manager', role: 'MANAGER', orgId: 'org-acme' },
-  { id: 'admin-1', name: 'Carol Admin', role: 'ORG_ADMIN', orgId: 'org-acme' },
-  { id: 'admin-2', name: 'Dan Admin', role: 'ORG_ADMIN', orgId: 'org-globex' },
-  { id: 'support-1', name: 'Eve Support', role: 'SUPPORT', orgId: null },
-  { id: 'super-1', name: 'Frank Super', role: 'SUPER_ADMIN', orgId: null },
-];
+### Database Tables for RBAC
+
+```sql
+-- Organization membership (org-level roles)
+CREATE TABLE org_members (
+  org_id     TEXT NOT NULL REFERENCES orgs(org_id),
+  user_id    TEXT NOT NULL REFERENCES users(user_id),
+  role       TEXT NOT NULL,  -- 'admin', 'manager', 'member'
+  PRIMARY KEY (org_id, user_id)
+);
+
+-- Platform-level users (SUPPORT, SUPER_ADMIN)
+CREATE TABLE platform_users (
+  user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
+  role       TEXT NOT NULL CHECK (role IN ('SUPPORT', 'SUPER_ADMIN'))
+);
+```
+
+### Role Resolution Logic
+
+1. Check `platform_users` table first - if user exists, use platform role
+2. Otherwise, check `org_members` table for org-level role
+3. Map database roles to UserRole enum:
+   - `admin` → `ORG_ADMIN`
+   - `manager` → `MANAGER`
+   - `member` → `MEMBER`
+
+### Sample Seed Data (see scripts/seed-orgs-users.sql)
+
+```sql
+-- Platform users
+INSERT INTO platform_users (user_id, role) VALUES
+  ('user_support_1', 'SUPPORT'),
+  ('user_admin_1', 'SUPER_ADMIN');
+
+-- Org users (via org_members)
+INSERT INTO org_members (org_id, user_id, role) VALUES
+  ('org_small', 'user_small_1', 'admin'),
+  ('org_medium', 'user_med_2', 'manager'),
+  ('org_large', 'user_large_3', 'member');
 ```
 
 ---

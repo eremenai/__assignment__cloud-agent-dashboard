@@ -57,7 +57,7 @@ const baseEventSchema = z.object({
   org_id: z.string().min(1),
   occurred_at: z.string().datetime({ message: "occurred_at must be RFC3339 format" }),
   session_id: z.string().min(1),
-  user_id: z.string().nullable(),
+  user_id: z.string().min(1), // user_id is always required
   run_id: z.string().nullable(),
 });
 

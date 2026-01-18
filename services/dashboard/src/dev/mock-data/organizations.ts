@@ -1,24 +1,28 @@
 /**
  * Mock organization data.
+ * These match the orgs seeded in scripts/seed-orgs-users.sql.
  */
 
 import type { Organization } from "@/lib/types/domain";
 
+const now = new Date();
+const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
 export const MOCK_ORGANIZATIONS: Organization[] = [
   {
-    orgId: "org-acme",
-    name: "Acme Corp",
-    createdAt: new Date("2024-01-15"),
+    orgId: "org_small",
+    name: "Small Startup",
+    createdAt: daysAgo(180),
   },
   {
-    orgId: "org-globex",
-    name: "Globex Inc",
-    createdAt: new Date("2024-02-01"),
+    orgId: "org_medium",
+    name: "Medium Team",
+    createdAt: daysAgo(365),
   },
   {
-    orgId: "org-initech",
-    name: "Initech",
-    createdAt: new Date("2024-03-10"),
+    orgId: "org_large",
+    name: "Large Corp",
+    createdAt: daysAgo(730),
   },
 ];
 

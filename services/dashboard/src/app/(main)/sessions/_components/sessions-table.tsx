@@ -127,12 +127,12 @@ export function SessionsTable({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-xs">{getInitials(session.createdByUser.name)}</AvatarFallback>
+                        <AvatarFallback className="text-xs">{getInitials(session.createdByUser?.name ?? "")}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="max-w-[120px] truncate text-sm">{session.createdByUser.name}</span>
+                        <span className="max-w-[120px] truncate text-sm">{session.createdByUser?.name ?? session.userId ?? "Unknown"}</span>
                         <span className="max-w-[120px] truncate text-muted-foreground text-xs">
-                          {session.createdByUser.email}
+                          {session.createdByUser?.email ?? ""}
                         </span>
                       </div>
                     </div>
@@ -142,11 +142,11 @@ export function SessionsTable({
                 <TableCell>{formatDuration(session.lifespanMs)}</TableCell>
                 <TableCell>{formatDuration(session.activeTimeMs)}</TableCell>
                 <TableCell className="text-right">{session.runCount}</TableCell>
-                <TableCell className="text-right">{session.localHandoffCount}</TableCell>
+                <TableCell className="text-right">{session.localHandoffCount ?? session.handoffCount ?? 0}</TableCell>
                 <TableCell>
                   {session.hasPostHandoffIteration ? (
                     <Check className="h-4 w-4 text-green-600" />
-                  ) : session.localHandoffCount > 0 ? (
+                  ) : (session.localHandoffCount ?? session.handoffCount ?? 0) > 0 ? (
                     <X className="h-4 w-4 text-muted-foreground" />
                   ) : (
                     <span className="text-muted-foreground">-</span>
@@ -156,9 +156,9 @@ export function SessionsTable({
                   {session.runCount > 0 ? (
                     <StatusBadge
                       status={
-                        session.successRate >= 90 ? "SUCCEEDED" : session.successRate >= 50 ? "TIMEOUT" : "FAILED"
+                        (session.successRate ?? 0) >= 90 ? "success" : (session.successRate ?? 0) >= 50 ? "timeout" : "fail"
                       }
-                      label={formatPercent(session.successRate)}
+                      label={formatPercent(session.successRate ?? 0)}
                     />
                   ) : (
                     "-"

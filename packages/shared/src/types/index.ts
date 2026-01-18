@@ -31,7 +31,7 @@ export interface AnalyticsEvent {
   occurred_at: string; // RFC3339
   event_type: EventType;
   session_id: string;
-  user_id: string | null;
+  user_id: string; // user_id is always required
   run_id: string | null;
   payload: EventPayload;
 }
@@ -112,7 +112,7 @@ export interface DbEventRaw {
   inserted_at: Date;
   event_type: string;
   session_id: string;
-  user_id: string | null;
+  user_id: string; // user_id is always required
   run_id: string | null;
   payload: Record<string, unknown>;
 }

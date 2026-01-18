@@ -1,30 +1,31 @@
 /**
  * Core domain types for the Agent Cloud Execution Monitoring Dashboard.
  * These types represent the main entities in the system.
+ *
+ * IMPORTANT: These types should align with @repo/shared/types for consistency.
+ * Backend types use snake_case and lowercase enum values.
  */
 
 // ============================================================================
 // Enums / Union Types
 // ============================================================================
 
+// UserRole uses UPPERCASE to match auth convention (RBAC standard)
 export type UserRole = "MEMBER" | "MANAGER" | "ORG_ADMIN" | "SUPPORT" | "SUPER_ADMIN";
 
-export type RunStatus = "SUCCEEDED" | "FAILED" | "CANCELED" | "TIMEOUT";
+// Backend uses lowercase for status values stored in DB
+export type RunStatus = "success" | "fail" | "timeout" | "cancelled";
 
-export type EventType = "MESSAGE" | "RUN_START" | "RUN_END" | "HANDOFF";
+// Backend event types match analytics event contract
+export type EventType = "message_created" | "run_started" | "run_completed" | "local_handoff";
 
-export type ActorType = "USER" | "AGENT" | "SYSTEM";
+export type ActorType = "user" | "agent" | "system";
 
-export type HandoffMethod = "TELEPORT" | "OPEN_IN_CLI" | "DOWNLOAD_PATCH";
+// Backend handoff methods
+export type HandoffMethod = "teleport" | "download" | "copy_patch" | "other";
 
-export type FailureCategory =
-  | "TIMEOUT"
-  | "RATE_LIMIT"
-  | "CONTEXT_LENGTH"
-  | "TOOL_ERROR"
-  | "VALIDATION_ERROR"
-  | "INTERNAL_ERROR"
-  | "USER_CANCELED";
+// Error categories match backend ErrorCategory
+export type FailureCategory = "tool_error" | "model_error" | "timeout" | "unknown";
 
 // ============================================================================
 // Core Entities
@@ -61,13 +62,16 @@ export interface Session {
 export interface Run {
   runId: string;
   sessionId: string;
-  orgId: string;
+  orgId?: string;
+  userId?: string;
   startedAt: Date;
-  completedAt: Date;
+  completedAt?: Date;
+  endedAt?: Date;
   status: RunStatus;
   queueWaitMs?: number;
   executionMs: number;
   failureCategory?: FailureCategory;
+  errorType?: string;
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -87,27 +91,28 @@ export interface Event {
   eventId: string;
   sessionId: string;
   timestamp: Date;
-  type: EventType;
-  actorType: ActorType;
-  payload: EventPayload;
+  type?: EventType;
+  eventType?: string;
+  actorType?: ActorType;
+  payload?: EventPayload;
 }
 
 export type EventPayload = MessagePayload | RunStartPayload | RunEndPayload | HandoffPayload;
 
 export interface MessagePayload {
-  type: "MESSAGE";
+  type: "message_created" | "MESSAGE"; // Allow both for backwards compatibility
   content: string;
   preview?: string; // Truncated version for timeline display
 }
 
 export interface RunStartPayload {
-  type: "RUN_START";
+  type: "run_started" | "RUN_START"; // Allow both for backwards compatibility
   runId: string;
   runNumber: number;
 }
 
 export interface RunEndPayload {
-  type: "RUN_END";
+  type: "run_completed" | "RUN_END"; // Allow both for backwards compatibility
   runId: string;
   runNumber: number;
   status: RunStatus;
@@ -118,19 +123,21 @@ export interface RunEndPayload {
 }
 
 export interface HandoffPayload {
-  type: "HANDOFF";
+  type: "local_handoff" | "HANDOFF"; // Allow both for backwards compatibility
   handoffId: string;
   method: HandoffMethod;
   userId: string;
 }
 
 export interface LocalHandoffEvent {
-  handoffId: string;
+  handoffId?: string;
+  eventId?: string;
+  eventType?: string;
   sessionId: string;
-  orgId: string;
-  userId: string;
+  orgId?: string;
+  userId?: string;
   timestamp: Date;
-  method: HandoffMethod;
+  method: HandoffMethod | string;
 }
 
 // ============================================================================
@@ -140,16 +147,25 @@ export interface LocalHandoffEvent {
 /**
  * Session with computed metrics for display in tables/lists.
  */
-export interface SessionWithMetrics extends Session {
-  createdByUser: Pick<User, "userId" | "name" | "email">;
+export interface SessionWithMetrics extends Partial<Session> {
+  sessionId: string;
+  orgId: string;
+  createdAt: Date;
+  firstMessageAt: Date;
+  lastMessageAt: Date;
+  createdByUser?: Pick<User, "userId" | "name" | "email">;
+  userId?: string;
   lifespanMs: number;
   activeTimeMs: number;
   runCount: number;
-  successfulRunCount: number;
-  failedRunCount: number;
-  localHandoffCount: number;
+  successfulRunCount?: number;
+  successfulRuns?: number;
+  failedRunCount?: number;
+  failedRuns?: number;
+  localHandoffCount?: number;
+  handoffCount?: number;
   hasPostHandoffIteration: boolean;
-  successRate: number;
+  successRate?: number;
   totalCostCents: number;
   inputTokens: number;
   outputTokens: number;
@@ -159,32 +175,46 @@ export interface SessionWithMetrics extends Session {
 /**
  * User with computed metrics for display in tables/lists.
  */
-export interface UserWithMetrics extends User {
+export interface UserWithMetrics extends Partial<User> {
+  userId: string;
+  email: string;
+  displayName?: string;
+  name?: string;
+  role: UserRole;
+  orgId?: string | null;
+  createdAt?: Date;
+  lastActiveAt?: Date;
   sessionCount: number;
   runCount: number;
+  successfulRuns?: number;
+  failedRuns?: number;
   avgRunsPerSession: number;
   avgActiveTimeMs: number;
-  avgLifespanMs: number;
-  localHandoffRate: number;
+  avgLifespanMs?: number;
+  localHandoffRate?: number;
+  handoffRate?: number;
   postHandoffIterationRate: number;
   successRate: number;
   totalCostCents: number;
   totalTokens: number;
-  costPerRun: number;
+  costPerRun?: number;
 }
 
 /**
  * Organization with computed metrics for global overview.
  */
 export interface OrgWithMetrics extends Organization {
-  activeUserCount: number;
+  activeUserCount?: number;
+  userCount?: number;
   sessionCount: number;
   runCount: number;
   successRate: number;
   avgRunsPerSession: number;
-  localHandoffRate: number;
+  localHandoffRate?: number;
+  handoffRate?: number;
   totalCostCents: number;
-  trend: "improving" | "declining" | "stable";
+  trend?: "improving" | "declining" | "stable";
+  healthTrend?: "improving" | "declining" | "stable";
 }
 
 // ============================================================================
@@ -220,8 +250,11 @@ export interface TrendData {
 // ============================================================================
 
 export interface PlatformKPIs {
-  totalRuns: TrendData;
+  sessions?: TrendData;
+  runs?: TrendData;
+  totalRuns?: TrendData;
   successRate: TrendData;
+  avgRunDurationMs?: TrendData;
   p95DurationMs: TrendData;
   totalCostCents: TrendData;
   totalTokens: TrendData;
@@ -229,15 +262,19 @@ export interface PlatformKPIs {
 
 export interface FrictionKPIs {
   avgRunsPerSession: TrendData;
-  avgActiveTimeMs: TrendData;
-  avgLifespanMs: TrendData;
+  avgActiveTimeMs?: TrendData;
+  avgLifespanMs?: TrendData;
   localHandoffRate: TrendData;
   postHandoffIterationRate: TrendData;
 }
 
 export interface GlobalKPIs extends PlatformKPIs {
-  totalOrgs: number;
-  activeUsers: TrendData;
+  totalOrgs: TrendData | number;
+  totalUsers?: TrendData;
+  totalSessions?: TrendData;
+  platformSuccessRate?: TrendData;
+  platformHandoffRate?: TrendData;
+  activeUsers?: TrendData;
 }
 
 // ============================================================================

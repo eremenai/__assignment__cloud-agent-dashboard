@@ -27,6 +27,13 @@ CREATE TABLE IF NOT EXISTS org_members (
   PRIMARY KEY (org_id, user_id)
 );
 
+-- Platform-level users (SUPPORT, SUPER_ADMIN) who operate across organizations
+CREATE TABLE IF NOT EXISTS platform_users (
+  user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
+  role       TEXT NOT NULL CHECK (role IN ('SUPPORT', 'SUPER_ADMIN')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ============================================================================
 -- Event Store
 -- ============================================================================
@@ -38,7 +45,7 @@ CREATE TABLE IF NOT EXISTS events_raw (
   inserted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   event_type  TEXT NOT NULL,
   session_id  TEXT NOT NULL,
-  user_id     TEXT NULL,
+  user_id     TEXT NOT NULL,
   run_id      TEXT NULL,
   payload     JSONB NOT NULL,
   PRIMARY KEY (org_id, event_id)

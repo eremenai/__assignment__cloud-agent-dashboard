@@ -89,14 +89,8 @@ export interface RunGeneratorOptions {
   runCount: number;
 }
 
-const FAILURE_CATEGORIES: FailureCategory[] = [
-  "TIMEOUT",
-  "RATE_LIMIT",
-  "CONTEXT_LENGTH",
-  "TOOL_ERROR",
-  "VALIDATION_ERROR",
-  "INTERNAL_ERROR",
-];
+// Failure categories matching backend ErrorCategory type
+const FAILURE_CATEGORIES: FailureCategory[] = ["tool_error", "model_error", "timeout", "unknown"];
 
 export function generateRuns(options: RunGeneratorOptions): Run[] {
   const { session, runCount } = options;
@@ -118,8 +112,9 @@ export function generateRuns(options: RunGeneratorOptions): Run[] {
     currentTime = completedAt;
 
     // Status - 85% success rate overall
+    // Use lowercase values matching backend RunStatus type
     const isSuccess = Math.random() < 0.85;
-    const status: RunStatus = isSuccess ? "SUCCEEDED" : randomChoice(["FAILED", "TIMEOUT", "CANCELED"]);
+    const status: RunStatus = isSuccess ? "success" : randomChoice(["fail", "timeout", "cancelled"]);
 
     // Tokens and cost
     const inputTokens = randomInt(5000, 50000);
@@ -218,8 +213,8 @@ export function generateEvents(options: EventGeneratorOptions): Event[] {
     createEvent(
       session.sessionId,
       session.firstMessageAt,
-      "MESSAGE",
-      "USER",
+      "message_created",
+      "user",
       createMessagePayload(randomChoice(USER_MESSAGES)),
     ),
   );
@@ -230,17 +225,18 @@ export function generateEvents(options: EventGeneratorOptions): Event[] {
 
     // Run start
     events.push(
-      createEvent(session.sessionId, run.startedAt, "RUN_START", "SYSTEM", {
-        type: "RUN_START",
+      createEvent(session.sessionId, run.startedAt, "run_started", "system", {
+        type: "run_started",
         runId: run.runId,
         runNumber,
       }),
     );
 
     // Run end
+    const runEndTime = run.completedAt ?? run.endedAt ?? run.startedAt;
     events.push(
-      createEvent(session.sessionId, run.completedAt, "RUN_END", "SYSTEM", {
-        type: "RUN_END",
+      createEvent(session.sessionId, runEndTime, "run_completed", "system", {
+        type: "run_completed",
         runId: run.runId,
         runNumber,
         status: run.status,
@@ -252,13 +248,13 @@ export function generateEvents(options: EventGeneratorOptions): Event[] {
     );
 
     // Agent message after successful runs
-    if (run.status === "SUCCEEDED") {
+    if (run.status === "success") {
       events.push(
         createEvent(
           session.sessionId,
-          addSeconds(run.completedAt, randomInt(5, 30)),
-          "MESSAGE",
-          "AGENT",
+          addSeconds(runEndTime, randomInt(5, 30)),
+          "message_created",
+          "agent",
           createMessagePayload(randomChoice(AGENT_MESSAGES)),
         ),
       );
@@ -269,9 +265,9 @@ export function generateEvents(options: EventGeneratorOptions): Event[] {
       events.push(
         createEvent(
           session.sessionId,
-          addMinutes(run.completedAt, randomInt(1, 5)),
-          "MESSAGE",
-          "USER",
+          addMinutes(runEndTime, randomInt(1, 5)),
+          "message_created",
+          "user",
           createMessagePayload(randomChoice(USER_MESSAGES)),
         ),
       );
@@ -300,7 +296,7 @@ function createEvent(
 
 function createMessagePayload(content: string): EventPayload {
   return {
-    type: "MESSAGE",
+    type: "message_created",
     content,
     preview: content.length > 100 ? `${content.substring(0, 100)}...` : content,
   };
@@ -310,7 +306,8 @@ function createMessagePayload(content: string): EventPayload {
 // Handoff Generation
 // ============================================================================
 
-const HANDOFF_METHODS: HandoffMethod[] = ["TELEPORT", "OPEN_IN_CLI", "DOWNLOAD_PATCH"];
+// Handoff methods matching backend HandoffMethod type
+const HANDOFF_METHODS: HandoffMethod[] = ["teleport", "download", "copy_patch", "other"];
 
 export interface HandoffGeneratorOptions {
   session: Session;
@@ -336,12 +333,13 @@ export function generateHandoffs(options: HandoffGeneratorOptions): LocalHandoff
 
   for (const idx of runIndices) {
     const run = runs[idx];
+    const runEndTime = run.completedAt ?? run.endedAt ?? run.startedAt;
     handoffs.push({
       handoffId: randomId("ho"),
       sessionId: session.sessionId,
       orgId: session.orgId,
       userId: session.createdByUserId,
-      timestamp: addMinutes(run.completedAt, randomInt(1, 10)),
+      timestamp: addMinutes(runEndTime, randomInt(1, 10)),
       method: randomChoice(HANDOFF_METHODS),
     });
   }

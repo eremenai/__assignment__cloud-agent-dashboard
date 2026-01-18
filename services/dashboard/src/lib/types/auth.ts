@@ -110,8 +110,8 @@ export interface AuthContextValue {
   /** Check if user can view a specific resource */
   canViewSession: (sessionCreatedByUserId: string) => boolean;
   canViewUser: (targetUserId: string) => boolean;
-  /** Switch to a different dev user (dev mode only) */
-  switchUser: (userId: string) => void;
+  /** Refresh user from JWT after user switch (dev mode only) */
+  switchUser: () => void;
 }
 
 // ============================================================================

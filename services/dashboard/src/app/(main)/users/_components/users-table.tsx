@@ -125,9 +125,9 @@ export function UsersTable({ users, pagination, sort, onPageChange, onSortChange
                   {user.avgRunsPerSession.toFixed(1)}
                 </TableCell>
                 <TableCell>{formatDuration(user.avgActiveTimeMs)}</TableCell>
-                <TableCell>{formatDuration(user.avgLifespanMs)}</TableCell>
-                <TableCell className={user.localHandoffRate > 50 ? "text-amber-600" : ""}>
-                  {formatPercent(user.localHandoffRate)}
+                <TableCell>{formatDuration(user.avgLifespanMs ?? 0)}</TableCell>
+                <TableCell className={(user.localHandoffRate ?? user.handoffRate ?? 0) > 50 ? "text-amber-600" : ""}>
+                  {formatPercent(user.localHandoffRate ?? user.handoffRate ?? 0)}
                 </TableCell>
                 <TableCell className={user.postHandoffIterationRate > 30 ? "text-amber-600" : ""}>
                   {formatPercent(user.postHandoffIterationRate)}
@@ -139,7 +139,7 @@ export function UsersTable({ users, pagination, sort, onPageChange, onSortChange
                 </TableCell>
                 <TableCell className="text-muted-foreground">{formatNumber(user.totalTokens)}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(user.totalCostCents / 100)}</TableCell>
-                <TableCell>{formatCurrency(user.costPerRun / 100)}</TableCell>
+                <TableCell>{formatCurrency((user.costPerRun ?? 0) / 100)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

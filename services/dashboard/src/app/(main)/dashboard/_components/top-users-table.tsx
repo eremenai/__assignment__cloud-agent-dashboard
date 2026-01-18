@@ -43,7 +43,7 @@ export function TopUsersTable({ users, className }: TopUsersTableProps) {
         sorted.sort((a, b) => b.sessionCount - a.sessionCount);
         break;
       case "handoff":
-        sorted.sort((a, b) => b.localHandoffRate - a.localHandoffRate);
+        sorted.sort((a, b) => (b.localHandoffRate ?? b.handoffRate ?? 0) - (a.localHandoffRate ?? a.handoffRate ?? 0));
         break;
     }
     return sorted.slice(0, 10);
@@ -162,8 +162,8 @@ export function TopUsersTable({ users, className }: TopUsersTableProps) {
                   <TableCell>
                     <Link href={`/users/${user.userId}`} className="flex items-center gap-2 hover:underline">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
-                        <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                        <AvatarImage src={user.avatarUrl} alt={user.name ?? user.displayName ?? ""} />
+                        <AvatarFallback className="text-xs">{getInitials(user.name ?? user.displayName ?? "")}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="font-medium">{user.name}</span>
@@ -174,7 +174,7 @@ export function TopUsersTable({ users, className }: TopUsersTableProps) {
                   <TableCell className="text-right">{user.sessionCount}</TableCell>
                   <TableCell className="text-right">{user.runCount}</TableCell>
                   <TableCell className="text-right">{user.avgRunsPerSession.toFixed(1)}</TableCell>
-                  <TableCell className="text-right">{formatPercent(user.localHandoffRate)}</TableCell>
+                  <TableCell className="text-right">{formatPercent(user.localHandoffRate ?? user.handoffRate ?? 0)}</TableCell>
                   <TableCell className="text-right">{formatPercent(user.successRate)}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{formatNumber(user.totalTokens)}</TableCell>
                   <TableCell className="text-right font-medium">{formatCurrency(user.totalCostCents / 100)}</TableCell>

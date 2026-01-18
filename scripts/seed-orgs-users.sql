@@ -45,10 +45,10 @@ INSERT INTO users (user_id, email, display_name, created_at) VALUES
   ('user_large_10', 'quinn@largecorp.com', 'Quinn Jones', now() - interval '250 days')
 ON CONFLICT (user_id) DO NOTHING;
 
--- Platform users (SUPPORT, SUPER_ADMIN)
+-- Platform users (SUPPORT, SUPER_ADMIN) - not members of any org
 INSERT INTO users (user_id, email, display_name, created_at) VALUES
-  ('user_support_1', 'support@platform.com', 'Support Agent', now() - interval '365 days'),
-  ('user_admin_1', 'admin@platform.com', 'Platform Admin', now() - interval '730 days')
+  ('user_support_1', 'eve.support@platform.com', 'Eve Support', now() - interval '365 days'),
+  ('user_admin_1', 'frank.admin@platform.com', 'Frank Super', now() - interval '730 days')
 ON CONFLICT (user_id) DO NOTHING;
 
 -- ============================================================================
@@ -61,25 +61,35 @@ INSERT INTO org_members (org_id, user_id, role, created_at) VALUES
   ('org_small', 'user_small_2', 'member', now() - interval '120 days')
 ON CONFLICT (org_id, user_id) DO NOTHING;
 
--- Medium Team memberships
+-- Medium Team memberships (includes a manager)
 INSERT INTO org_members (org_id, user_id, role, created_at) VALUES
   ('org_medium', 'user_med_1', 'admin', now() - interval '300 days'),
-  ('org_medium', 'user_med_2', 'member', now() - interval '280 days'),
+  ('org_medium', 'user_med_2', 'manager', now() - interval '280 days'),
   ('org_medium', 'user_med_3', 'member', now() - interval '250 days'),
   ('org_medium', 'user_med_4', 'member', now() - interval '200 days'),
-  ('org_medium', 'user_med_5', 'viewer', now() - interval '180 days')
+  ('org_medium', 'user_med_5', 'member', now() - interval '180 days')
 ON CONFLICT (org_id, user_id) DO NOTHING;
 
 -- Large Corp memberships
 INSERT INTO org_members (org_id, user_id, role, created_at) VALUES
   ('org_large', 'user_large_1', 'admin', now() - interval '700 days'),
-  ('org_large', 'user_large_2', 'admin', now() - interval '650 days'),
+  ('org_large', 'user_large_2', 'manager', now() - interval '650 days'),
   ('org_large', 'user_large_3', 'member', now() - interval '600 days'),
   ('org_large', 'user_large_4', 'member', now() - interval '550 days'),
   ('org_large', 'user_large_5', 'member', now() - interval '500 days'),
   ('org_large', 'user_large_6', 'member', now() - interval '450 days'),
   ('org_large', 'user_large_7', 'member', now() - interval '400 days'),
   ('org_large', 'user_large_8', 'member', now() - interval '350 days'),
-  ('org_large', 'user_large_9', 'viewer', now() - interval '300 days'),
-  ('org_large', 'user_large_10', 'viewer', now() - interval '250 days')
+  ('org_large', 'user_large_9', 'member', now() - interval '300 days'),
+  ('org_large', 'user_large_10', 'member', now() - interval '250 days')
 ON CONFLICT (org_id, user_id) DO NOTHING;
+
+-- ============================================================================
+-- Platform Users (SUPPORT, SUPER_ADMIN)
+-- ============================================================================
+
+-- Platform users have platform-level roles, not org memberships
+INSERT INTO platform_users (user_id, role, created_at) VALUES
+  ('user_support_1', 'SUPPORT', now() - interval '365 days'),
+  ('user_admin_1', 'SUPER_ADMIN', now() - interval '730 days')
+ON CONFLICT (user_id) DO NOTHING;

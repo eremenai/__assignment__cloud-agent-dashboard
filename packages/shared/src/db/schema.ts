@@ -58,6 +58,17 @@ export const orgMembers = pgTable(
   (table) => [primaryKey({ columns: [table.org_id, table.user_id] })]
 );
 
+/**
+ * Platform-level users (SUPPORT, SUPER_ADMIN) who operate across organizations.
+ */
+export const platformUsers = pgTable("platform_users", {
+  user_id: text("user_id")
+    .primaryKey()
+    .references(() => users.user_id),
+  role: text("role").notNull(), // "SUPPORT" | "SUPER_ADMIN"
+  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ============================================================================
 // Event Store
 // ============================================================================
@@ -74,7 +85,7 @@ export const eventsRaw = pgTable(
     inserted_at: timestamp("inserted_at", { withTimezone: true }).notNull().defaultNow(),
     event_type: text("event_type").notNull(),
     session_id: text("session_id").notNull(),
-    user_id: text("user_id"),
+    user_id: text("user_id").notNull(), // user_id is always required
     run_id: text("run_id"),
     payload: jsonb("payload").notNull(),
   },
@@ -243,6 +254,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type OrgMember = typeof orgMembers.$inferSelect;
 export type NewOrgMember = typeof orgMembers.$inferInsert;
+
+export type PlatformUser = typeof platformUsers.$inferSelect;
+export type NewPlatformUser = typeof platformUsers.$inferInsert;
 
 export type EventRaw = typeof eventsRaw.$inferSelect;
 export type NewEventRaw = typeof eventsRaw.$inferInsert;

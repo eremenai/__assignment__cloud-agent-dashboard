@@ -36,19 +36,21 @@ export function SessionHeader({ session }: SessionHeaderProps) {
               Session {formatSessionId(session.sessionId)}
             </h1>
             <StatusBadge
-              status={session.successRate === 100 ? "SUCCEEDED" : session.successRate >= 50 ? "TIMEOUT" : "FAILED"}
-              label={session.successRate === 100 ? "All Success" : `${formatPercent(session.successRate)} Success`}
+              status={(session.successRate ?? 0) === 100 ? "success" : (session.successRate ?? 0) >= 50 ? "timeout" : "fail"}
+              label={(session.successRate ?? 0) === 100 ? "All Success" : `${formatPercent(session.successRate ?? 0)} Success`}
             />
           </div>
           <div className="mt-1 flex items-center gap-4 text-muted-foreground text-sm">
             <span>Started {formatDate(session.createdAt)}</span>
-            <span className="flex items-center gap-2">
-              <span>Created by</span>
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[10px]">{getInitials(session.createdByUser.name)}</AvatarFallback>
-              </Avatar>
-              <span className="font-medium text-foreground">{session.createdByUser.name}</span>
-            </span>
+            {session.createdByUser && (
+              <span className="flex items-center gap-2">
+                <span>Created by</span>
+                <Avatar className="h-5 w-5">
+                  <AvatarFallback className="text-[10px]">{getInitials(session.createdByUser.name ?? "")}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-foreground">{session.createdByUser.name}</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -75,7 +77,7 @@ export function SessionHeader({ session }: SessionHeaderProps) {
         />
         <KPICard
           title="Handoffs"
-          value={session.localHandoffCount.toString()}
+          value={(session.localHandoffCount ?? session.handoffCount ?? 0).toString()}
           className="@container/card"
           tooltip="Number of local handoffs (teleport, CLI, patch download)."
         />

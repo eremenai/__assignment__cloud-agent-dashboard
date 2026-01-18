@@ -43,6 +43,11 @@ const chartConfig: ChartConfig = {
 };
 
 const failureCategoryLabels: Record<string, string> = {
+  timeout: "Timeout",
+  tool_error: "Tool Error",
+  model_error: "Model Error",
+  unknown: "Unknown",
+  // Legacy uppercase values for backwards compatibility
   TIMEOUT: "Timeout",
   RATE_LIMIT: "Rate Limit",
   CONTEXT_LENGTH: "Context Length",

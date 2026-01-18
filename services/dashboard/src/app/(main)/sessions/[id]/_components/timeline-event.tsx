@@ -92,10 +92,12 @@ export function TimelineEvent({
   let eventId: string | undefined;
 
   const payload = event.payload;
+  const eventType = event.type ?? payload?.type;
 
-  switch (payload.type) {
+  switch (eventType) {
     case "MESSAGE":
-      if (event.actorType === "USER") {
+    case "message_created":
+      if (event.actorType === "user") {
         icon = <MessageSquare className="h-4 w-4" />;
         iconColor = "text-blue-500";
         title = "User message";
@@ -104,36 +106,43 @@ export function TimelineEvent({
         iconColor = "text-purple-500";
         title = "Agent response";
       }
-      details = <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">{payload.preview || payload.content}</p>;
+      details = payload && 'preview' in payload ? (
+        <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">{payload.preview || (payload as { content?: string }).content}</p>
+      ) : null;
       break;
 
     case "RUN_START":
+    case "run_started": {
+      const runStartPayload = payload as { runNumber?: number } | undefined;
       icon = <Play className="h-4 w-4" />;
       iconColor = "text-gray-400";
-      title = `Run #${payload.runNumber} started`;
+      title = `Run #${runStartPayload?.runNumber ?? "?"} started`;
       break;
+    }
 
-    case "RUN_END": {
-      const run = runs.find((r) => r.runId === payload.runId);
-      const status = payload.status;
-      eventId = `event-run-${payload.runId}`;
+    case "RUN_END":
+    case "run_completed": {
+      const runEndPayload = payload as { runId?: string; runNumber?: number; status?: string } | undefined;
+      const run = runs.find((r) => r.runId === runEndPayload?.runId);
+      const status = runEndPayload?.status;
+      eventId = `event-run-${runEndPayload?.runId}`;
 
-      if (status === "SUCCEEDED") {
+      if (status === "SUCCEEDED" || status === "success") {
         icon = <CheckCircle className="h-4 w-4" />;
         iconColor = "text-green-500";
-        title = `Run #${payload.runNumber} completed (Success)`;
-      } else if (status === "FAILED") {
+        title = `Run #${runEndPayload?.runNumber ?? "?"} completed (Success)`;
+      } else if (status === "FAILED" || status === "fail") {
         icon = <XCircle className="h-4 w-4" />;
         iconColor = "text-red-500";
-        title = `Run #${payload.runNumber} failed`;
-      } else if (status === "TIMEOUT") {
+        title = `Run #${runEndPayload?.runNumber ?? "?"} failed`;
+      } else if (status === "TIMEOUT" || status === "timeout") {
         icon = <Clock className="h-4 w-4" />;
         iconColor = "text-amber-500";
-        title = `Run #${payload.runNumber} timed out`;
+        title = `Run #${runEndPayload?.runNumber ?? "?"} timed out`;
       } else {
         icon = <XOctagon className="h-4 w-4" />;
         iconColor = "text-gray-500";
-        title = `Run #${payload.runNumber} canceled`;
+        title = `Run #${runEndPayload?.runNumber ?? "?"} canceled`;
       }
 
       if (run) {
@@ -142,17 +151,22 @@ export function TimelineEvent({
       break;
     }
 
-    case "HANDOFF": {
+    case "HANDOFF":
+    case "local_handoff": {
+      const handoffPayload = payload as { method?: string; handoffId?: string } | undefined;
       icon = <ArrowUpRight className="h-4 w-4" />;
       iconColor = "text-teal-500";
-      title = `Local handoff (${payload.method})`;
-      eventId = `event-handoff-${payload.handoffId}`;
-      const handoff = handoffs.find((h) => h.handoffId === payload.handoffId);
+      title = `Local handoff (${handoffPayload?.method ?? "unknown"})`;
+      eventId = `event-handoff-${handoffPayload?.handoffId}`;
+      const handoff = handoffs.find((h) => h.handoffId === handoffPayload?.handoffId);
       if (handoff) {
         details = <p className="mt-1 text-muted-foreground text-sm">User: {handoff.userId}</p>;
       }
       break;
     }
+
+    default:
+      title = "Unknown event";
   }
 
   return (

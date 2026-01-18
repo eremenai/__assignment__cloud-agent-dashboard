@@ -49,7 +49,7 @@ export function TopSessionsTable({ sessions, className }: TopSessionsTableProps)
         sorted.sort((a, b) => b.lifespanMs - a.lifespanMs);
         break;
       case "failures":
-        sorted.sort((a, b) => b.failedRunCount - a.failedRunCount);
+        sorted.sort((a, b) => (b.failedRunCount ?? b.failedRuns ?? 0) - (a.failedRunCount ?? a.failedRuns ?? 0));
         break;
     }
     return sorted.slice(0, 10);
@@ -186,14 +186,14 @@ export function TopSessionsTable({ sessions, className }: TopSessionsTableProps)
                   <TableCell className="text-muted-foreground">{formatRelativeTime(session.createdAt)}</TableCell>
                   <TableCell>{formatDuration(session.lifespanMs)}</TableCell>
                   <TableCell className="text-right">{session.runCount}</TableCell>
-                  <TableCell className="text-right">{session.localHandoffCount}</TableCell>
+                  <TableCell className="text-right">{session.localHandoffCount ?? session.handoffCount ?? 0}</TableCell>
                   <TableCell className="text-right">
                     {session.runCount > 0 ? (
                       <StatusBadge
                         status={
-                          session.successRate >= 90 ? "SUCCEEDED" : session.successRate >= 50 ? "TIMEOUT" : "FAILED"
+                          (session.successRate ?? 0) >= 90 ? "success" : (session.successRate ?? 0) >= 50 ? "timeout" : "fail"
                         }
-                        label={formatPercent(session.successRate)}
+                        label={formatPercent(session.successRate ?? 0)}
                       />
                     ) : (
                       "-"

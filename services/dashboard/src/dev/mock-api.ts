@@ -85,8 +85,8 @@ function computeSessionMetrics(session: Session, runs: Run[], handoffs: { sessio
 
   const lifespanMs = session.lastMessageAt.getTime() - session.firstMessageAt.getTime();
   const activeTimeMs = sessionRuns.reduce((sum, r) => sum + r.executionMs, 0);
-  const successfulRuns = sessionRuns.filter((r) => r.status === "SUCCEEDED").length;
-  const failedRuns = sessionRuns.filter((r) => r.status !== "SUCCEEDED").length;
+  const successfulRuns = sessionRuns.filter((r) => r.status === "success").length;
+  const failedRuns = sessionRuns.filter((r) => r.status !== "success").length;
   const totalCostCents = sessionRuns.reduce((sum, r) => sum + r.costCents, 0);
   const inputTokens = sessionRuns.reduce((sum, r) => sum + r.inputTokens, 0);
   const outputTokens = sessionRuns.reduce((sum, r) => sum + r.outputTokens, 0);
@@ -156,7 +156,7 @@ function computeUserMetrics(
   // Post-handoff iteration rate (simplified)
   const postHandoffIterationRate = localHandoffRate * 0.3; // ~30% of handoffs lead to iteration
 
-  const successfulRuns = userRuns.filter((r) => r.status === "SUCCEEDED").length;
+  const successfulRuns = userRuns.filter((r) => r.status === "success").length;
   const successRate = runCount > 0 ? (successfulRuns / runCount) * 100 : 0;
 
   const totalCostCents = userRuns.reduce((sum, r) => sum + r.costCents, 0);
@@ -204,8 +204,8 @@ export function getOrgMetrics(orgId: string, timeRange: TimeRangeParams): OrgMet
   // Platform KPIs
   const totalRuns = computeTrendData(currentRuns.length, prevRuns.length);
 
-  const currentSuccess = currentRuns.filter((r) => r.status === "SUCCEEDED").length;
-  const prevSuccess = prevRuns.filter((r) => r.status === "SUCCEEDED").length;
+  const currentSuccess = currentRuns.filter((r) => r.status === "success").length;
+  const prevSuccess = prevRuns.filter((r) => r.status === "success").length;
   const currentSuccessRate = currentRuns.length > 0 ? (currentSuccess / currentRuns.length) * 100 : 0;
   const prevSuccessRate = prevRuns.length > 0 ? (prevSuccess / prevRuns.length) * 100 : 0;
   const successRate = computeTrendData(currentSuccessRate, prevSuccessRate);
@@ -396,22 +396,22 @@ export function getSessionsList(
   if (filters.search) {
     const search = filters.search.toLowerCase();
     sessionsWithMetrics = sessionsWithMetrics.filter(
-      (s) => s.sessionId.toLowerCase().includes(search) || s.createdByUser.email.toLowerCase().includes(search),
+      (s) => s.sessionId.toLowerCase().includes(search) || (s.createdByUser?.email ?? "").toLowerCase().includes(search),
     );
   }
 
   // Apply status filter
   if (filters.status === "has_failures") {
-    sessionsWithMetrics = sessionsWithMetrics.filter((s) => s.failedRunCount > 0);
+    sessionsWithMetrics = sessionsWithMetrics.filter((s) => (s.failedRunCount ?? s.failedRuns ?? 0) > 0);
   } else if (filters.status === "all_succeeded") {
-    sessionsWithMetrics = sessionsWithMetrics.filter((s) => s.failedRunCount === 0);
+    sessionsWithMetrics = sessionsWithMetrics.filter((s) => (s.failedRunCount ?? s.failedRuns ?? 0) === 0);
   }
 
   // Apply handoff filter
   if (filters.hasHandoff === "yes") {
-    sessionsWithMetrics = sessionsWithMetrics.filter((s) => s.localHandoffCount > 0);
+    sessionsWithMetrics = sessionsWithMetrics.filter((s) => (s.localHandoffCount ?? s.handoffCount ?? 0) > 0);
   } else if (filters.hasHandoff === "no") {
-    sessionsWithMetrics = sessionsWithMetrics.filter((s) => s.localHandoffCount === 0);
+    sessionsWithMetrics = sessionsWithMetrics.filter((s) => (s.localHandoffCount ?? s.handoffCount ?? 0) === 0);
   }
 
   // Compute summary from filtered sessions
@@ -433,7 +433,7 @@ export function getSessionsList(
     handoffRate:
       sessionsWithMetrics.length > 0
         ? Math.round(
-            (sessionsWithMetrics.filter((s) => s.localHandoffCount > 0).length / sessionsWithMetrics.length) * 100 * 10,
+            (sessionsWithMetrics.filter((s) => (s.localHandoffCount ?? s.handoffCount ?? 0) > 0).length / sessionsWithMetrics.length) * 100 * 10,
           ) / 10
         : 0,
   };
@@ -556,7 +556,7 @@ export function getUsersList(
   if (filters.search) {
     const search = filters.search.toLowerCase();
     usersWithMetrics = usersWithMetrics.filter(
-      (u) => u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search),
+      (u) => (u.name ?? u.displayName ?? "").toLowerCase().includes(search) || u.email.toLowerCase().includes(search),
     );
   }
 
@@ -568,7 +568,7 @@ export function getUsersList(
     avgHandoffRate:
       usersWithMetrics.length > 0
         ? Math.round(
-            (usersWithMetrics.reduce((sum, u) => sum + u.localHandoffRate, 0) / usersWithMetrics.length) * 10,
+            (usersWithMetrics.reduce((sum, u) => sum + (u.localHandoffRate ?? u.handoffRate ?? 0), 0) / usersWithMetrics.length) * 10,
           ) / 10
         : 0,
   };
@@ -703,7 +703,7 @@ export function getGlobalMetrics(_timeRange: TimeRangeParams): GlobalMetricsResp
   for (const org of orgs) {
     const runs = getRunsForOrg(org.orgId);
     totalRuns += runs.length;
-    totalSuccess += runs.filter((r) => r.status === "SUCCEEDED").length;
+    totalSuccess += runs.filter((r) => r.status === "success").length;
     totalCost += runs.reduce((sum, r) => sum + r.costCents, 0);
     totalTokens += runs.reduce((sum, r) => sum + r.totalTokens, 0);
   }
@@ -732,7 +732,7 @@ export function getGlobalOrgs(_pagination: PaginationParams, sort: SortParams): 
     const users = getUsersForOrg(org.orgId);
     const handoffs = getHandoffsForOrg(org.orgId);
 
-    const successfulRuns = runs.filter((r) => r.status === "SUCCEEDED").length;
+    const successfulRuns = runs.filter((r) => r.status === "success").length;
     const sessionsWithHandoff = new Set(handoffs.map((h) => h.sessionId)).size;
 
     return {
@@ -781,7 +781,7 @@ export function getOrgFailures(
 
   const runs = getRunsForOrg(orgId);
   const filteredRuns = filterByTimeRange(runs, from, to);
-  const failedRuns = filteredRuns.filter((r) => r.status !== "SUCCEEDED");
+  const failedRuns = filteredRuns.filter((r) => r.status !== "success");
 
   const categoryCounts = new Map<FailureCategory, number>();
   for (const run of failedRuns) {

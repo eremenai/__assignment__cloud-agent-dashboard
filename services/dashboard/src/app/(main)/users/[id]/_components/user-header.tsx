@@ -19,20 +19,20 @@ export function UserHeader({ user }: UserHeaderProps) {
     <div className="flex items-start gap-6">
       {/* Avatar */}
       <Avatar className="h-20 w-20">
-        <AvatarImage src={user.avatarUrl} alt={user.name} />
-        <AvatarFallback className="text-2xl">{getInitials(user.name)}</AvatarFallback>
+        <AvatarImage src={user.avatarUrl} alt={user.name ?? user.displayName ?? ""} />
+        <AvatarFallback className="text-2xl">{getInitials(user.name ?? user.displayName ?? "")}</AvatarFallback>
       </Avatar>
 
       {/* Info */}
       <div className="flex-1">
         <div className="flex items-center gap-3">
-          <h1 className="font-bold text-2xl">{user.name}</h1>
+          <h1 className="font-bold text-2xl">{user.name ?? user.displayName ?? user.email}</h1>
           <RoleBadge role={user.role} />
         </div>
         <p className="mt-1 text-muted-foreground">{user.email}</p>
         <div className="mt-2 flex flex-wrap gap-4 text-muted-foreground text-sm">
-          <span>Last active: {formatRelativeTime(user.lastActiveAt)}</span>
-          <span>Member since: {user.createdAt.toLocaleDateString()}</span>
+          <span>Last active: {user.lastActiveAt ? formatRelativeTime(user.lastActiveAt) : "Unknown"}</span>
+          <span>Member since: {user.createdAt?.toLocaleDateString() ?? "Unknown"}</span>
         </div>
       </div>
     </div>

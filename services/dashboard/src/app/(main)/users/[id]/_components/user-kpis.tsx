@@ -39,7 +39,7 @@ export function UserKPIs({ user }: UserKPIsProps) {
         />
         <KPICard
           title="Avg Lifespan"
-          value={formatDuration(user.avgLifespanMs)}
+          value={formatDuration(user.avgLifespanMs ?? 0)}
           tooltip="Average time from first prompt to last message in sessions."
         />
       </KPIRow>
@@ -47,7 +47,7 @@ export function UserKPIs({ user }: UserKPIsProps) {
       <KPIRow columns={5}>
         <KPICard
           title="Handoff Rate"
-          value={formatPercent(user.localHandoffRate)}
+          value={formatPercent(user.localHandoffRate ?? user.handoffRate ?? 0)}
           tooltip="Percentage of sessions where results were exported locally."
         />
         <KPICard

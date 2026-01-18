@@ -28,7 +28,8 @@ export function TimelineTab({ events, runs, handoffs, highlightedRunId, onHighli
   // Find the event that matches the highlighted run (RUN_END event)
   const getIsHighlighted = (event: Event): boolean => {
     if (!highlightedRunId) return false;
-    if (event.payload.type === "RUN_END" && event.payload.runId === highlightedRunId) {
+    const payload = event.payload as { type?: string; runId?: string } | undefined;
+    if ((payload?.type === "RUN_END" || payload?.type === "run_completed") && payload?.runId === highlightedRunId) {
       return true;
     }
     return false;

@@ -28,24 +28,24 @@ interface TimelineSegment {
   type: "run" | "handoff" | "idle";
   startMs: number;
   endMs: number;
-  status?: "SUCCEEDED" | "FAILED" | "TIMEOUT" | "CANCELED";
+  status?: "success" | "fail" | "timeout" | "cancelled";
   label: string;
   details: React.ReactNode;
   clickTarget?: string;
 }
 
 const statusColors = {
-  SUCCEEDED: "bg-gradient-to-b from-green-400 to-green-500 border-green-600",
-  FAILED: "bg-gradient-to-b from-red-400 to-red-500 border-red-600",
-  TIMEOUT: "bg-gradient-to-b from-amber-400 to-amber-500 border-amber-600",
-  CANCELED: "bg-gradient-to-b from-gray-300 to-gray-400 border-gray-500",
+  success: "bg-gradient-to-b from-green-400 to-green-500 border-green-600",
+  fail: "bg-gradient-to-b from-red-400 to-red-500 border-red-600",
+  timeout: "bg-gradient-to-b from-amber-400 to-amber-500 border-amber-600",
+  cancelled: "bg-gradient-to-b from-gray-300 to-gray-400 border-gray-500",
 };
 
 const statusLabels = {
-  SUCCEEDED: "Success",
-  FAILED: "Failed",
-  TIMEOUT: "Timeout",
-  CANCELED: "Canceled",
+  success: "Success",
+  fail: "Failed",
+  timeout: "Timeout",
+  cancelled: "Canceled",
 };
 
 export function SessionTimelineBar({
@@ -69,7 +69,7 @@ export function SessionTimelineBar({
     // Add run segments
     runs.forEach((run, index) => {
       const runStartMs = run.startedAt.getTime() - sessionStartMs;
-      const runEndMs = run.completedAt.getTime() - sessionStartMs;
+      const runEndMs = (run.completedAt ?? run.endedAt ?? run.startedAt).getTime() - sessionStartMs;
       allSegments.push({
         id: run.runId,
         type: "run",
@@ -83,10 +83,10 @@ export function SessionTimelineBar({
               <span
                 className={cn(
                   "rounded px-1.5 py-0.5 font-medium text-xs",
-                  run.status === "SUCCEEDED" && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                  run.status === "FAILED" && "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-                  run.status === "TIMEOUT" && "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-                  run.status === "CANCELED" && "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+                  run.status === "success" && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                  run.status === "fail" && "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+                  run.status === "timeout" && "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+                  run.status === "cancelled" && "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
                 )}
               >
                 {statusLabels[run.status]}
@@ -120,7 +120,7 @@ export function SessionTimelineBar({
     handoffs.forEach((handoff, index) => {
       const handoffMs = handoff.timestamp.getTime() - sessionStartMs;
       allSegments.push({
-        id: handoff.handoffId,
+        id: handoff.handoffId ?? handoff.eventId ?? `handoff-${index}`,
         type: "handoff",
         startMs: handoffMs,
         endMs: handoffMs + totalDurationMs * 0.01, // 1% width for visibility

@@ -132,7 +132,7 @@ export function createRun(overrides: Partial<Run> = {}): Run {
     orgId: "org-test",
     startedAt,
     completedAt: new Date(startedAt.getTime() + executionMs),
-    status: "SUCCEEDED" as RunStatus,
+    status: "success" as RunStatus,
     executionMs,
     inputTokens: 10000,
     outputTokens: 5000,
@@ -151,10 +151,10 @@ export function createEvent(overrides: Partial<Event> = {}): Event {
     eventId: generateId("evt"),
     sessionId: "sess-test",
     timestamp: new Date(),
-    type: "MESSAGE",
-    actorType: "USER",
+    type: "message_created",
+    actorType: "user",
     payload: {
-      type: "MESSAGE",
+      type: "message_created",
       content: "Test message",
     },
     ...overrides,
@@ -172,7 +172,7 @@ export function createHandoff(overrides: Partial<LocalHandoffEvent> = {}): Local
     orgId: "org-test",
     userId: "user-test",
     timestamp: new Date(),
-    method: "TELEPORT",
+    method: "teleport",
     ...overrides,
   };
 }

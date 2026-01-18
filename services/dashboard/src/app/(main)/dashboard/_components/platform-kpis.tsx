@@ -25,9 +25,9 @@ export function PlatformKPIsSection({ data, isLoading }: PlatformKPIsSectionProp
     <KPIRow columns={5}>
       <KPICard
         title="Total Runs"
-        value={data ? formatNumber(data.totalRuns.current) : "0"}
-        trend={data?.totalRuns.changePercent}
-        trendPreviousValue={data ? formatNumber(data.totalRuns.previous) : undefined}
+        value={data?.totalRuns ? formatNumber(data.totalRuns.current) : "0"}
+        trend={data?.totalRuns?.changePercent}
+        trendPreviousValue={data?.totalRuns ? formatNumber(data.totalRuns.previous) : undefined}
         trendPreviousPeriod={previousPeriod}
         upIsGood={true}
         isLoading={isLoading}

@@ -65,7 +65,7 @@ export function OrgRankingsTable({ orgs }: OrgRankingsTableProps) {
               <TableRow key={org.orgId}>
                 <TableCell className="font-mono text-muted-foreground">{index + 1}</TableCell>
                 <TableCell className="font-medium">{org.name}</TableCell>
-                <TableCell className="text-right">{formatNumber(org.activeUserCount)}</TableCell>
+                <TableCell className="text-right">{formatNumber(org.activeUserCount ?? org.userCount ?? 0)}</TableCell>
                 <TableCell className="text-right">{formatNumber(org.sessionCount)}</TableCell>
                 <TableCell className="text-right font-medium">{formatNumber(org.runCount)}</TableCell>
                 <TableCell className="text-right">
@@ -83,7 +83,7 @@ export function OrgRankingsTable({ orgs }: OrgRankingsTableProps) {
                 </TableCell>
                 <TableCell className="text-right">{formatCurrency(org.totalCostCents / 100)}</TableCell>
                 <TableCell>
-                  <TrendBadge trend={org.trend} />
+                  <TrendBadge trend={org.trend ?? org.healthTrend ?? "stable"} />
                 </TableCell>
               </TableRow>
             ))}

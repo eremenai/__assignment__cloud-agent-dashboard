@@ -62,6 +62,7 @@ describe("Test Factories", () => {
   it("should create a run with computed completedAt", () => {
     const run = createRun({ executionMs: 120000 });
     const expectedCompletion = run.startedAt.getTime() + run.executionMs;
-    expect(run.completedAt.getTime()).toBe(expectedCompletion);
+    expect(run.completedAt).toBeDefined();
+    expect(run.completedAt?.getTime()).toBe(expectedCompletion);
   });
 });

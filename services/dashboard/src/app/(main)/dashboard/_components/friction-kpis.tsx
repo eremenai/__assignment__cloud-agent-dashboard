@@ -36,9 +36,9 @@ export function FrictionKPIsSection({ data, isLoading }: FrictionKPIsSectionProp
       />
       <KPICard
         title="Avg Active Time"
-        value={data ? formatDuration(data.avgActiveTimeMs.current) : "0s"}
-        trend={data?.avgActiveTimeMs.changePercent}
-        trendPreviousValue={data ? formatDuration(data.avgActiveTimeMs.previous) : undefined}
+        value={data?.avgActiveTimeMs ? formatDuration(data.avgActiveTimeMs.current) : "0s"}
+        trend={data?.avgActiveTimeMs?.changePercent}
+        trendPreviousValue={data?.avgActiveTimeMs ? formatDuration(data.avgActiveTimeMs.previous) : undefined}
         trendPreviousPeriod={previousPeriod}
         isLoading={isLoading}
         className="@container/card"
@@ -46,9 +46,9 @@ export function FrictionKPIsSection({ data, isLoading }: FrictionKPIsSectionProp
       />
       <KPICard
         title="Avg Lifespan"
-        value={data ? formatDuration(data.avgLifespanMs.current) : "0s"}
-        trend={data?.avgLifespanMs.changePercent}
-        trendPreviousValue={data ? formatDuration(data.avgLifespanMs.previous) : undefined}
+        value={data?.avgLifespanMs ? formatDuration(data.avgLifespanMs.current) : "0s"}
+        trend={data?.avgLifespanMs?.changePercent}
+        trendPreviousValue={data?.avgLifespanMs ? formatDuration(data.avgLifespanMs.previous) : undefined}
         trendPreviousPeriod={previousPeriod}
         isLoading={isLoading}
         className="@container/card"
