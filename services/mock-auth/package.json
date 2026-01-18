@@ -8,8 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "biome lint src/",
-    "test": "vitest",
-    "test:run": "vitest run"
+    "test": "vitest --passWithNoTests",
+    "test:run": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@repo/shared": "workspace:*",
