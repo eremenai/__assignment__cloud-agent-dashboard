@@ -178,46 +178,87 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 
 ---
 
-## Phase 6: Backend Implementation
+## Phase 6: Backend Implementation ✅
 **Goal:** Implement data layer and connect frontend to real APIs.
 
 **Milestones:**
 
-### 6.1 Data Layer Setup
-- [ ] Database schema (if storing locally)
-- [ ] Connection to upstream data source
-- [ ] Data models / repositories
+### 6.1 Data Layer Setup ✅
+- [x] Database schema (`packages/shared/src/db/schema.ts`)
+- [x] Drizzle ORM client with singleton pattern (`packages/shared/src/db/client.ts`)
+- [x] Event contract with Zod validation (`packages/shared/src/schemas/`)
+- [x] Domain types (`packages/shared/src/types/`)
 
-### 6.2 API Implementation
-- [ ] Org overview endpoints (aggregated metrics)
-- [ ] Sessions list endpoint (with filters, pagination)
-- [ ] Session detail endpoint
-- [ ] CSV export endpoint
+### 6.2 Ingest Service ✅
+- [x] Fastify server with graceful shutdown (`services/ingest/`)
+- [x] POST /events endpoint with batch validation
+- [x] Transaction-safe insert to events_raw + events_queue
+- [x] Duplicate event handling (onConflictDoNothing)
 
-### 6.3 Frontend Integration
-- [ ] Replace mock data with API calls
-- [ ] Add loading/error states
-- [ ] Implement data caching/refetching strategy
+### 6.3 Projection Worker ✅
+- [x] Long-running process with configurable poll interval (`services/worker/`)
+- [x] Two-phase commit pattern (claim → process → mark done)
+- [x] Projectors: message, run, handoff events
+- [x] Daily aggregate updates (org_stats_daily, user_stats_daily)
+- [x] Post-handoff iteration logic (4-hour window)
+
+### 6.4 Dashboard Queries ✅
+- [x] Org metrics aggregation (`getOrgMetricsFromDb`)
+- [x] Org daily trends (`getOrgTrendsFromDb`)
+- [x] Sessions list with pagination (`getSessionsListFromDb`)
+- [x] Session detail with runs/events (`getSessionDetailFromDb`)
+- [x] Users list aggregation (`getUsersListFromDb`)
+- [x] P95 duration query (`getP95DurationFromDb`)
+- [x] Global metrics - SUPER_ADMIN (`getGlobalMetricsFromDb`)
+- [x] Top orgs - SUPER_ADMIN (`getTopOrgsFromDb`)
+
+### 6.5 Mock Data Generator ✅
+- [x] CLI tool with commander.js (`tools/generator/`)
+- [x] Date range generation (--days, --from/--to)
+- [x] Posts to Ingest API with batching
+- [x] Dry-run mode support
+
+### 6.6 Frontend Integration ✅
+- [x] Replace mock data with real DB queries via server actions
+- [x] Wire up dashboard page to DB (`lib/data/org-data.ts`)
+- [x] Wire up sessions page to DB (`lib/data/sessions-data.ts`)
+- [x] Wire up users page to DB (`lib/data/users-data.ts`)
+- [x] Wire up global page to DB (`lib/data/global-data.ts`)
+
+### 6.7 Backend Tests ✅
+- [x] Ingest API tests (validation, batch handling, duplicates)
+- [x] Worker processor tests (queue handling, projections)
+- [x] Projector unit tests (message, run, handoff)
+
+### 6.8 Docker Setup ✅
+- [x] Dockerfile for ingest service (`services/ingest/Dockerfile`)
+- [x] Dockerfile for worker service (`services/worker/Dockerfile`)
+- [x] Dockerfile for dashboard (`services/dashboard/Dockerfile`)
 
 **Exit criteria:** Dashboard displays real data from backend.
 
+**Note:** Set `USE_REAL_DB=true` environment variable to use real database instead of mock data.
+
 ---
 
-## Phase 7: Deployment (Docker Compose)
+## Phase 7: Deployment (Docker Compose) ✅
 **Goal:** Package solution for local deployment.
 
 **Deliverables:**
-- [ ] `Dockerfile` for frontend (Next.js)
-- [ ] `Dockerfile` for backend (if separate)
-- [ ] `docker-compose.yml` with all services
-- [ ] Environment configuration (`.env.example`)
-- [ ] README with setup/run instructions
+- [x] `Dockerfile` for dashboard (`services/dashboard/Dockerfile`)
+- [x] `Dockerfile` for ingest API (`services/ingest/Dockerfile`)
+- [x] `Dockerfile` for worker (`services/worker/Dockerfile`)
+- [x] `docker-compose.yml` with all services (dev mode - DB only)
+- [x] `docker-compose.prod.yml` with full production stack
+- [ ] Environment configuration (`.env.example`) - TODO
+- [ ] README with setup/run instructions - TODO
 
 **Services in compose:**
-- Frontend (Next.js)
-- Backend API (if separate)
-- Database (if needed)
-- (Optional) Mock data seeder
+- Dashboard (Next.js)
+- Ingest API (Fastify)
+- Worker (long-running process)
+- PostgreSQL database
+- (Optional) Mock data generator CLI
 
 **Exit criteria:** `docker compose up` starts working dashboard.
 
@@ -272,3 +313,5 @@ See `.ai/TRADEOFFS_FUTURE_STEPS.md` for comprehensive list of:
 | 2026-01-17 | Initial roadmap created |
 | 2026-01-17 | Added auth model, multi-org support, Global Overview page |
 | 2026-01-18 | Completed Phase 4 & 5: Backend architecture and tech selection |
+| 2026-01-18 | Completed Phase 6: Backend tests, frontend integration, Dockerfiles |
+| 2026-01-18 | Completed Phase 7: Docker deployment configuration |

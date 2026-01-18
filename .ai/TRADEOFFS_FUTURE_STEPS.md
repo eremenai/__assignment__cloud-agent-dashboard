@@ -238,7 +238,22 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 16. Teams Feature Deferred
+### 16. CSV Export Deferred
+
+**Current state:** No CSV export functionality for sessions or users lists.
+
+**Tradeoff:** V1 focuses on interactive dashboard views. Export can be done via browser copy/paste or screenshots.
+
+**Future step:**
+- Add CSV export endpoint for sessions list
+- Add CSV export endpoint for users list
+- Download button in table headers
+
+**Effort:** Low (0.5 days)
+
+---
+
+### 17. Teams Feature Deferred
 
 **Current state:** Data model supports teams (`org_members.team_id`), but UI doesn't expose it. Users see org-level or individual views only.
 
@@ -253,7 +268,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 17. No External Integrations
+### 18. No External Integrations
 
 **Current state:** No GitHub, GitLab, CI/CD, Slack, or other integrations.
 
@@ -268,7 +283,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 18. No Tagging System
+### 19. No Tagging System
 
 **Current state:** Sessions/runs cannot be tagged or categorized by users.
 
@@ -283,7 +298,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ## 🟢 Low (Polish/Convenience)
 
-### 19. SSR-First Data Fetching (No TanStack Query)
+### 20. SSR-First Data Fetching (No TanStack Query)
 
 **Current state:** Dashboard uses SSR for data fetching. No client-side caching or background refetch.
 
@@ -298,7 +313,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 20. No Keyboard Shortcuts
+### 21. No Keyboard Shortcuts
 
 **Current state:** All interactions are mouse/touch only.
 
@@ -310,7 +325,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 21. No Accessibility Audit
+### 22. No Accessibility Audit
 
 **Current state:** Using shadcn/ui (Radix primitives), which has good a11y defaults. But no formal audit.
 
@@ -324,7 +339,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 22. No Internationalization (i18n)
+### 23. No Internationalization (i18n)
 
 **Current state:** English only. No translation infrastructure.
 
@@ -337,7 +352,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 23. Single Theme (No Dark Mode Toggle)
+### 24. Single Theme (No Dark Mode Toggle)
 
 **Current state:** Default theme only. Theme system was removed for simplicity.
 
@@ -351,7 +366,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 24. Basic Responsive Design
+### 25. Basic Responsive Design
 
 **Current state:** Dashboard works on mobile but optimized for desktop. Complex tables may need horizontal scroll.
 
@@ -364,7 +379,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 25. USD-Only Cost Display
+### 26. USD-Only Cost Display
 
 **Current state:** All costs displayed in USD. No currency conversion.
 
@@ -377,7 +392,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 26. Single Timezone Assumption
+### 27. Single Timezone Assumption
 
 **Current state:** Times displayed in browser local timezone. No explicit timezone handling.
 
@@ -390,7 +405,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 27. No Offline Support
+### 28. No Offline Support
 
 **Current state:** Dashboard requires network connection. No service worker or offline caching.
 
@@ -411,7 +426,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 | Security | 3 | 0 | 0 | 0 | 0 |
 | Scalability | 0 | 3 | 1 | 0 | 1 (daily rollups) |
 | Reliability | 1 | 2 | 1 | 0 | 0 |
-| Features | 0 | 0 | 4 | 0 | 0 |
+| Features | 0 | 0 | 5 | 0 | 0 |
 | DevOps | 0 | 0 | 3 | 0 | 0 |
 | UX/Polish | 0 | 0 | 0 | 9 | 0 |
 
