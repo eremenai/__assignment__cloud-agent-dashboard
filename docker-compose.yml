@@ -7,13 +7,13 @@ services:
     environment:
       POSTGRES_DB: analytics
       POSTGRES_USER: analytics
-      POSTGRES_PASSWORD: dev_password
+      POSTGRES_PASSWORD: analytics
     # NO VOLUME - ephemeral database, fresh on every restart
     volumes:
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./scripts/seed-orgs-users.sql:/docker-entrypoint-initdb.d/02-seed.sql
     ports:
-      - "5432:5432"
+      - "7000:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U analytics -d analytics"]
       interval: 5s

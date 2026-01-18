@@ -5,14 +5,13 @@
  * into read models (run_facts, session_stats, daily aggregates).
  */
 
-import { closeDb } from "@repo/shared/db/client";
+import { closeDb, getDb } from "@repo/shared/db/client";
 import { Processor } from "./processor.js";
 
 const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS) || 2000;
 const BATCH_SIZE = Number(process.env.WORKER_BATCH_SIZE) || 100;
 
 let running = true;
-let processor: Processor;
 
 // Graceful shutdown
 const shutdown = async (signal: string) => {
@@ -29,7 +28,9 @@ async function main() {
   console.log(`[Worker] Starting projection worker`);
   console.log(`[Worker] Poll interval: ${POLL_INTERVAL_MS}ms, Batch size: ${BATCH_SIZE}`);
 
-  processor = new Processor(BATCH_SIZE);
+  // Initialize db connection at startup
+  const db = getDb();
+  const processor = new Processor(db, BATCH_SIZE);
 
   while (running) {
     try {

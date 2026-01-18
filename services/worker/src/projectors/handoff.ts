@@ -7,9 +7,10 @@
  * - user_stats_daily: sessions_with_handoff (on first handoff for session)
  */
 
-import { orgStatsDaily, runFacts, sessionStats, userStatsDaily, type eventsRaw } from "@repo/shared/db/schema";
+import { runFacts, sessionStats, type eventsRaw } from "@repo/shared/db/schema";
 import { POST_HANDOFF_WINDOW_MS } from "@repo/shared/types";
 import { and, eq, gt, lte, sql } from "drizzle-orm";
+import { updateDailyStats } from "./daily-stats.js";
 import type { DbTransaction } from "./types.js";
 
 export async function projectLocalHandoff(
@@ -20,12 +21,12 @@ export async function projectLocalHandoff(
 
   // Get current session stats to check if this is the first handoff
   const currentStats = await tx.execute(sql`
-    SELECT handoffs_count, first_message_at, user_id
+    SELECT handoffs_count, first_message_at
     FROM session_stats
     WHERE org_id = ${event.org_id} AND session_id = ${event.session_id}
   `);
 
-  const rows = currentStats as unknown as { handoffs_count: number; first_message_at: Date | null; user_id: string | null }[];
+  const rows = currentStats as unknown as { handoffs_count: number; first_message_at: Date | null }[];
   const isFirstHandoff = rows.length === 0 || rows[0].handoffs_count === 0;
   const sessionDay = rows[0]?.first_message_at
     ? (rows[0].first_message_at instanceof Date
@@ -33,7 +34,6 @@ export async function projectLocalHandoff(
         : new Date(rows[0].first_message_at)
       ).toISOString().split("T")[0]
     : occurredAt.toISOString().split("T")[0];
-  const userId = rows[0]?.user_id ?? event.user_id;
 
   // Update session_stats
   await tx
@@ -57,56 +57,41 @@ export async function projectLocalHandoff(
 
   // Check for post-handoff iteration (retroactive)
   // Look for runs that completed after this handoff within the window
-  await checkRetroactivePostHandoff(tx, event.org_id, event.session_id, occurredAt);
+  await checkRetroactivePostHandoff(tx, event.org_id, event.session_id, event.user_id, occurredAt);
 
   // Update daily aggregates on first handoff
   if (isFirstHandoff) {
-    // Update org_stats_daily
-    await tx
-      .insert(orgStatsDaily)
-      .values({
-        org_id: event.org_id,
-        day: sessionDay,
-        sessions_with_handoff: 1,
-      })
-      .onConflictDoUpdate({
-        target: [orgStatsDaily.org_id, orgStatsDaily.day],
-        set: {
-          sessions_with_handoff: sql`${orgStatsDaily.sessions_with_handoff} + 1`,
-        },
-      });
-
-    // Update user_stats_daily (if user_id is present)
-    if (userId) {
-      await tx
-        .insert(userStatsDaily)
-        .values({
-          org_id: event.org_id,
-          user_id: userId,
-          day: sessionDay,
-          sessions_with_handoff: 1,
-        })
-        .onConflictDoUpdate({
-          target: [userStatsDaily.org_id, userStatsDaily.user_id, userStatsDaily.day],
-          set: {
-            sessions_with_handoff: sql`${userStatsDaily.sessions_with_handoff} + 1`,
-          },
-        });
-    }
+    await updateDailyStats(tx, event.org_id, event.user_id, sessionDay, {
+      sessions_with_handoff: 1,
+    });
   }
 }
 
 /**
  * Check if any runs completed after the handoff within the post-handoff window.
- * If so, mark the session as having post-handoff iteration.
+ * If so, mark the session as having post-handoff iteration and update daily aggregates.
  */
 async function checkRetroactivePostHandoff(
   tx: DbTransaction,
   orgId: string,
   sessionId: string,
+  userId: string,
   handoffAt: Date
 ): Promise<void> {
   const windowEnd = new Date(handoffAt.getTime() + POST_HANDOFF_WINDOW_MS);
+
+  // First check if the flag is already set (to avoid double-counting in daily aggregates)
+  const currentStats = await tx.execute(sql`
+    SELECT has_post_handoff_iteration, first_message_at
+    FROM session_stats
+    WHERE org_id = ${orgId} AND session_id = ${sessionId}
+  `);
+
+  const statsRows = currentStats as unknown as { has_post_handoff_iteration: boolean; first_message_at: Date | null }[];
+  if (statsRows.length > 0 && statsRows[0].has_post_handoff_iteration) {
+    // Already set, nothing to do
+    return;
+  }
 
   // Check if any runs completed in the window after this handoff
   const runs = await tx
@@ -123,10 +108,26 @@ async function checkRetroactivePostHandoff(
     .limit(1);
 
   if (runs.length > 0) {
+    // Update session_stats
     await tx.execute(sql`
       UPDATE session_stats
       SET has_post_handoff_iteration = true
       WHERE org_id = ${orgId} AND session_id = ${sessionId}
     `);
+
+    // Update daily aggregates for sessions_with_post_handoff
+    // Attribute to the day of first_message_at
+    if (statsRows.length > 0) {
+      const sessionDay = statsRows[0].first_message_at
+        ? (statsRows[0].first_message_at instanceof Date
+            ? statsRows[0].first_message_at
+            : new Date(statsRows[0].first_message_at)
+          ).toISOString().split("T")[0]
+        : handoffAt.toISOString().split("T")[0];
+
+      await updateDailyStats(tx, orgId, userId, sessionDay, {
+        sessions_with_post_handoff: 1,
+      });
+    }
   }
 }
