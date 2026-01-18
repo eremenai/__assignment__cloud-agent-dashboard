@@ -26,7 +26,7 @@ services:
       dockerfile: services/mock-auth/Dockerfile
     environment:
       PORT: 3002
-      DATABASE_URL: postgres://analytics:analytics@db:7000/analytics
+      DATABASE_URL: postgres://analytics:analytics@db:5432/analytics
       JWT_SECRET: mock-auth-jwt-secret-for-dev-only
       COOKIE_SECRET: mock-auth-cookie-secret-for-dev-only
       LOG_LEVEL: info
@@ -36,7 +36,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3002/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3002/health"]
       interval: 10s
       timeout: 5s
       retries: 5

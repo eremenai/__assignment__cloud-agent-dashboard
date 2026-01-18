@@ -5,7 +5,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://analytics:dev_password@localhost:5432/analytics",
+    url: process.env.DATABASE_URL ?? "postgres://analytics:analytics@localhost:7000/analytics",
   },
   verbose: true,
   strict: true,

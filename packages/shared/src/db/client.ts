@@ -13,13 +13,10 @@ let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 /**
  * Get the database connection URL from environment.
+ * Falls back to local development default if not set.
  */
 export function getDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL environment variable is not set");
-  }
-  return url;
+  return process.env.DATABASE_URL ?? "postgres://analytics:analytics@localhost:7000/analytics";
 }
 
 /**
