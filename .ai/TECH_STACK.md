@@ -58,19 +58,49 @@ src/
 
 | Category | Choice | Status | Notes |
 |----------|--------|--------|-------|
-| Runtime | Next.js API Routes | ⏳ | Single codebase; revisit if aggregation heavy |
+| Dashboard API | Next.js API Routes | ✅ | Client-facing read APIs only |
+| Ingest API | Standalone Fastify | ✅ | Internal service-to-service, port 3001 |
+| Worker | Standalone Node.js script | ✅ | Separate process for projection |
 | Language | TypeScript | ✅ | |
-| Database | PostgreSQL | ❓ | Evaluate: SQLite for simplicity |
-| ORM | Drizzle ORM | ❓ | Evaluate: Prisma, Kysely |
-| Validation | Zod | ⏳ | Shared with frontend |
-| Auth | Custom JWT middleware | ✅ | See AUTH_AND_ROLES.md |
+| Database | PostgreSQL 16 | ✅ | Via Docker, sufficient for V1 scale |
+| ORM | Drizzle ORM | ✅ | Lightweight, SQL-like, good TypeScript DX |
+| Validation | Zod | ✅ | Shared across all services |
+| Auth (dashboard) | Custom JWT middleware | ✅ | See AUTH_AND_ROLES.md |
+| Auth (ingest) | None (V1) | ✅ | Internal network; mTLS in production |
 
-### Backend Alternatives (if Next.js API routes insufficient)
-| Option | When to consider |
-|--------|------------------|
-| Standalone Node.js + Fastify | Heavy aggregation, background jobs |
-| BFF pattern | Complex upstream integrations |
-| Edge functions | Global latency requirements |
+### Architecture Pattern
+
+Event-driven with append-only event store + pre-computed read models:
+
+```
+                    INTERNAL NETWORK
+Producer → Ingest API (:3001) → events_raw/events_queue
+                                       ↓
+                                 Worker (polls)
+                                       ↓
+                              run_facts + session_stats
+                                       ↓
+                    CLIENT-FACING
+                              Dashboard (:3000) reads
+```
+
+**Process separation:** Ingest API is separate from Dashboard to isolate internal service-to-service traffic from client-facing endpoints.
+
+### Database Tables
+
+| Table | Purpose | Written by | Read by |
+|-------|---------|------------|---------|
+| `orgs` | Organization registry | Seed/Admin | Dashboard |
+| `users` | User registry | Seed/Admin | Dashboard |
+| `org_members` | Membership + roles | Seed/Admin | Dashboard |
+| `events_raw` | Append-only event log | Ingest API | Worker, Dashboard |
+| `events_queue` | Processing queue | Ingest API | Worker |
+| `run_facts` | Per-run metrics | Worker | Dashboard |
+| `session_stats` | Per-session aggregates | Worker | Dashboard |
+| `org_stats_daily` | Daily org totals | Worker | Dashboard |
+| `user_stats_daily` | Daily user totals | Worker | Dashboard |
+
+See `.ai/BACKEND_ARCHITECTURE.md` for full schemas.
 
 ---
 
@@ -89,9 +119,11 @@ src/
 ### Docker Compose Services (V1)
 ```yaml
 services:
-  dashboard:        # Next.js app (frontend + API)
-  db:               # PostgreSQL (if needed)
-  # Future: redis, worker, etc.
+  db:               # PostgreSQL 16 (:5432)
+  ingest:           # Ingest API - Fastify (:3001, internal only)
+  worker:           # Projection worker (no HTTP)
+  dashboard:        # Next.js app (:3000, client-facing)
+  generator:        # Mock event generator (optional, via profile)
 ```
 
 ---
@@ -133,6 +165,11 @@ services:
 | 2026-01-17 | Biome.js | Single tool for lint + format, faster than ESLint |
 | 2026-01-17 | SSR-first data fetching | KISS - add TanStack Query only if needed |
 | 2026-01-17 | No Husky | Simpler workflow, manual lint before commit |
+| 2026-01-18 | PostgreSQL 16 | Sufficient for V1 scale, good JSON support |
+| 2026-01-18 | Drizzle ORM | Lightweight, SQL-like syntax, TypeScript-first |
+| 2026-01-18 | Separate worker container | Clean separation, horizontally scalable |
+| 2026-01-18 | Event-driven + read models | Near real-time, out-of-order tolerant, replayable |
+| 2026-01-18 | Separate Ingest API (Fastify) | Isolate internal S2S from client-facing, different trust boundaries |
 
 ---
 
@@ -140,3 +177,5 @@ services:
 - `.ai/PROJECT_BRIEF.md` - Product requirements and domain model
 - `.ai/ROADMAP.md` - Implementation phases and milestones
 - `.ai/AUTH_AND_ROLES.md` - Authentication and authorization model
+- `.ai/BACKEND_ARCHITECTURE.md` - Backend architecture and data model
+- `.ai/TRADEOFFS_FUTURE_STEPS.md` - What we deferred and why

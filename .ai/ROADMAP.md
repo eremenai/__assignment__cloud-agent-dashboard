@@ -141,45 +141,40 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 
 ---
 
-## Phase 4: Backend Architecture Discussion
+## Phase 4: Backend Architecture Discussion ✅
 **Goal:** Define how the dashboard receives real data.
 
-**Questions to answer:**
-- [ ] Who provides the raw data? (Agent execution platform, event stream, database)
-- [ ] What's the integration pattern? (API polling, webhooks, direct DB access, event bus)
-- [ ] Do we need to store/aggregate data ourselves, or query upstream?
-- [ ] What's the data freshness requirement? (real-time, near-real-time, batch)
-- [ ] Authentication/authorization model?
+**Questions answered:**
+- [x] Who provides the raw data? → Internal "drop-copy" service forwards events for all orgs
+- [x] What's the integration pattern? → Batch POST to internal ingest API
+- [x] Do we need to store/aggregate data ourselves? → Yes, append-only event store + read models
+- [x] What's the data freshness requirement? → Near real-time (queue + worker loop)
+- [x] Authentication/authorization model? → Service-level for ingest (mTLS in prod), JWT for dashboard
 
 **Deliverables:**
-- [ ] `.ai/BACKEND_ARCHITECTURE.md` - Integration patterns, data flow diagrams
-- [ ] API contract / schema definition (if we own the API)
-- [ ] Decision on storage (if we aggregate locally)
+- [x] `.ai/BACKEND_ARCHITECTURE.md` - Integration patterns, data flow diagrams
+- [x] API contract / schema definition (event envelope, ingest endpoint)
+- [x] Decision on storage (PostgreSQL with events_raw, run_facts, session_stats)
 
-**Exit criteria:** Architecture documented and approved.
+**Exit criteria:** Architecture documented and approved. ✅
 
 ---
 
-## Phase 5: Backend Technology Selection
+## Phase 5: Backend Technology Selection ✅
 **Goal:** Choose backend implementation approach.
 
-**Options to evaluate:**
-| Approach | Pros | Cons |
-|----------|------|------|
-| Next.js API routes | Single codebase, simple | May not scale for heavy aggregation |
-| Standalone Node.js/TS service | Separation of concerns | More infrastructure |
-| BFF pattern | Optimized for frontend needs | Additional layer |
-
-**Decisions to make:**
-- [ ] Backend runtime (Next.js API / standalone service)
-- [ ] Database (if needed): PostgreSQL, SQLite, etc.
-- [ ] ORM/query builder: Prisma, Drizzle, Kysely
-- [ ] Caching layer (if needed)
+**Decisions made:**
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Backend runtime | Next.js API routes + separate worker | Single codebase for dashboard, worker scales independently |
+| Database | PostgreSQL 16 | Sufficient for V1, good JSON support, mature |
+| ORM | Drizzle ORM | Lightweight, SQL-like, TypeScript-first |
+| Caching | None (V1) | Query-time aggregation is fast enough at this scale |
 
 **Deliverables:**
-- [ ] Update `.ai/TECH_STACK.md` with backend choices
+- [x] Update `.ai/TECH_STACK.md` with backend choices
 
-**Exit criteria:** Backend stack confirmed.
+**Exit criteria:** Backend stack confirmed. ✅
 
 ---
 
@@ -233,6 +228,16 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 
 ---
 
+## Tradeoffs & Future Steps
+
+See `.ai/TRADEOFFS_FUTURE_STEPS.md` for comprehensive list of:
+- Security tradeoffs (must address before production)
+- Scalability decisions (when they break, how to fix)
+- Deferred features (teams, integrations, tagging)
+- Polish items (a11y, i18n, dark mode)
+
+---
+
 ## Resolved Decisions
 | Decision | Resolution | Date |
 |----------|------------|------|
@@ -242,6 +247,16 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 | MEMBER scope | Own sessions + team/org aggregates | 2026-01-17 |
 | Teams | Defer UI, design data model for future | 2026-01-17 |
 | Data retention | 1 year | 2026-01-17 |
+| Database | PostgreSQL 16 | 2026-01-18 |
+| ORM | Drizzle ORM | 2026-01-18 |
+| Dev workflow | DB in Docker, Next.js + worker local | 2026-01-18 |
+| Seed data | 5 months history, full pipeline (events → worker → read models) | 2026-01-18 |
+| Frontend mocks | Remove, all data from DB | 2026-01-18 |
+| Session ownership | Single user per session | 2026-01-18 |
+| Mock generator | CLI with --days flag, simulates complete days | 2026-01-18 |
+| Worker execution | Long-running process with 2s poll interval | 2026-01-18 |
+| Daily aggregates | org_stats_daily + user_stats_daily (totals, not averages) | 2026-01-18 |
+| Integration tests | Test full ingest → worker → read model pipeline | 2026-01-18 |
 
 ---
 
@@ -250,3 +265,4 @@ This roadmap outlines the phased development of the Agent Cloud Execution Monito
 |------|--------|
 | 2026-01-17 | Initial roadmap created |
 | 2026-01-17 | Added auth model, multi-org support, Global Overview page |
+| 2026-01-18 | Completed Phase 4 & 5: Backend architecture and tech selection |
