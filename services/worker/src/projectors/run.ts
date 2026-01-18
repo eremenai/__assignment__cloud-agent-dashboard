@@ -16,14 +16,14 @@ import { runFacts, sessionStats, type eventsRaw } from "@repo/shared/db/schema";
 import type { RunCompletedPayload, ErrorCategory } from "@repo/shared/types";
 import { POST_HANDOFF_WINDOW_MS } from "@repo/shared/types";
 import { sql } from "drizzle-orm";
-import { updateDailyStats, type DailyStatsIncrements } from "./daily-stats.js";
-import type { DbTransaction } from "./types.js";
+import { updateDailyStats } from "./daily-stats.js";
+import { type DbTransaction, ensureDate, toIsoString } from "./types.js";
 
 export async function projectRunStarted(
   tx: DbTransaction,
   event: typeof eventsRaw.$inferSelect
 ): Promise<void> {
-  const occurredAt = event.occurred_at;
+  const occurredAt = ensureDate(event.occurred_at);
 
   if (!event.run_id) {
     console.warn("[Projector] run_started event missing run_id");
@@ -43,7 +43,7 @@ export async function projectRunStarted(
     .onConflictDoUpdate({
       target: [runFacts.org_id, runFacts.run_id],
       set: {
-        started_at: sql`LEAST(${runFacts.started_at}, ${occurredAt})`,
+        started_at: sql`LEAST(${runFacts.started_at}, ${toIsoString(occurredAt)}::timestamp)`,
         session_id: sql`COALESCE(${runFacts.session_id}, ${event.session_id})`,
         user_id: sql`COALESCE(${runFacts.user_id}, ${event.user_id})`,
       },
@@ -61,7 +61,7 @@ export async function projectRunStarted(
     .onConflictDoUpdate({
       target: [sessionStats.org_id, sessionStats.session_id],
       set: {
-        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${occurredAt})`,
+        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${toIsoString(occurredAt)}::timestamp)`,
       },
     });
 }
@@ -70,7 +70,7 @@ export async function projectRunCompleted(
   tx: DbTransaction,
   event: typeof eventsRaw.$inferSelect
 ): Promise<void> {
-  const occurredAt = event.occurred_at;
+  const occurredAt = ensureDate(event.occurred_at);
   const payload = event.payload as RunCompletedPayload;
 
   if (!event.run_id) {
@@ -100,7 +100,7 @@ export async function projectRunCompleted(
     .onConflictDoUpdate({
       target: [runFacts.org_id, runFacts.run_id],
       set: {
-        completed_at: sql`GREATEST(${runFacts.completed_at}, ${occurredAt})`,
+        completed_at: sql`GREATEST(${runFacts.completed_at}, ${toIsoString(occurredAt)}::timestamp)`,
         status: payload.status,
         duration_ms: payload.duration_ms,
         cost: String(payload.cost),
@@ -129,7 +129,7 @@ export async function projectRunCompleted(
     .onConflictDoUpdate({
       target: [sessionStats.org_id, sessionStats.session_id],
       set: {
-        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${occurredAt})`,
+        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${toIsoString(occurredAt)}::timestamp)`,
         runs_count: sql`${sessionStats.runs_count} + 1`,
         active_agent_time_ms: sql`${sessionStats.active_agent_time_ms} + ${payload.duration_ms}`,
         success_runs: sql`${sessionStats.success_runs} + ${isSuccess ? 1 : 0}`,
@@ -167,8 +167,10 @@ async function checkPostHandoffIteration(
   orgId: string,
   sessionId: string,
   userId: string,
-  completedAt: Date
+  completedAt: Date | string
 ): Promise<void> {
+  const completedAtDate = ensureDate(completedAt);
+
   // Get session stats to check last_handoff_at and current flag state
   const result = await tx.execute(sql`
     SELECT last_handoff_at, has_post_handoff_iteration, first_message_at
@@ -176,7 +178,7 @@ async function checkPostHandoffIteration(
     WHERE org_id = ${orgId} AND session_id = ${sessionId}
   `);
 
-  const rows = result as unknown as { last_handoff_at: Date | null; has_post_handoff_iteration: boolean; first_message_at: Date | null }[];
+  const rows = result as unknown as { last_handoff_at: Date | string | null; has_post_handoff_iteration: boolean; first_message_at: Date | string | null }[];
   if (rows.length === 0 || !rows[0].last_handoff_at) {
     return;
   }
@@ -187,8 +189,8 @@ async function checkPostHandoffIteration(
   }
 
   const lastHandoff = rows[0].last_handoff_at;
-  const handoffTime = lastHandoff instanceof Date ? lastHandoff.getTime() : new Date(lastHandoff).getTime();
-  const completedTime = completedAt.getTime();
+  const handoffTime = ensureDate(lastHandoff).getTime();
+  const completedTime = completedAtDate.getTime();
 
   // Check if completed within window after handoff
   if (completedTime > handoffTime && completedTime <= handoffTime + POST_HANDOFF_WINDOW_MS) {
@@ -202,11 +204,8 @@ async function checkPostHandoffIteration(
     // Update daily aggregates for sessions_with_post_handoff
     // Attribute to the day of first_message_at
     const sessionDay = rows[0].first_message_at
-      ? (rows[0].first_message_at instanceof Date
-          ? rows[0].first_message_at
-          : new Date(rows[0].first_message_at)
-        ).toISOString().split("T")[0]
-      : completedAt.toISOString().split("T")[0];
+      ? ensureDate(rows[0].first_message_at).toISOString().split("T")[0]
+      : completedAtDate.toISOString().split("T")[0];
 
     await updateDailyStats(tx, orgId, userId, sessionDay, {
       sessions_with_post_handoff: 1,

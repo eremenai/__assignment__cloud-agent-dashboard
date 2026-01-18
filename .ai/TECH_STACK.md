@@ -92,8 +92,7 @@ Producer → Ingest API (:3001) → events_raw/events_queue
 | Table | Purpose | Written by | Read by |
 |-------|---------|------------|---------|
 | `orgs` | Organization registry | Seed/Admin | Dashboard |
-| `users` | User registry | Seed/Admin | Dashboard |
-| `org_members` | Membership + roles | Seed/Admin | Dashboard |
+| `users` | User registry (with role + org_id) | Seed/Admin | Dashboard |
 | `events_raw` | Append-only event log | Ingest API | Worker, Dashboard |
 | `events_queue` | Processing queue | Ingest API | Worker |
 | `run_facts` | Per-run metrics | Worker | Dashboard |

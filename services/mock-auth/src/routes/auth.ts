@@ -1,21 +1,22 @@
 /**
  * Auth route - handles token issuance and validation.
+ * Uses the simplified users table with role and org_id columns.
  */
 
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
-import { users, orgMembers, orgs, platformUsers } from "@repo/shared/db/schema";
+import { users, orgs } from "@repo/shared/db/schema";
 import type { UserRole } from "@repo/shared/types";
 
-// JWT configuration
-const JWT_SECRET = new TextEncoder().encode(
+// JWT configuration - these must match the dashboard middleware
+export const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "mock-auth-jwt-secret-for-dev-only-do-not-use-in-production"
 );
-const JWT_ISSUER = "mock-auth-dev";
-const JWT_AUDIENCE = "cloud-agent-dashboard";
-const JWT_EXPIRATION = "24h";
-const COOKIE_NAME = "auth_token";
+export const JWT_ISSUER = "mock-auth-dev";
+export const JWT_AUDIENCE = "cloud-agent-dashboard";
+export const JWT_EXPIRATION = "24h";
+export const COOKIE_NAME = "auth_token";
 
 interface JWTPayload {
   sub: string; // userId
@@ -26,105 +27,142 @@ interface JWTPayload {
   [key: string]: unknown; // Index signature for jose compatibility
 }
 
-// Map database org_members roles to UserRole enum
-function mapDbRoleToUserRole(dbRole: string | null): UserRole {
-  switch (dbRole?.toLowerCase()) {
-    case "admin":
-      return "ORG_ADMIN";
-    case "member":
-      return "MEMBER";
-    case "viewer":
-      return "MEMBER";
-    case "manager":
-      return "MANAGER";
-    default:
-      return "MEMBER";
-  }
-}
-
 export async function authRoute(fastify: FastifyInstance) {
   /**
    * POST /auth/login - Authenticate as a specific user
+   * Optionally accepts a callback URL to redirect to after login.
    */
-  fastify.post<{ Body: { userId: string } }>("/auth/login", async (request, reply) => {
-    const { userId } = request.body;
-    const db = (fastify as unknown as { db: ReturnType<typeof import("@repo/shared/db/client").getDb> }).db;
+  fastify.post<{ Body: { userId: string }; Querystring: { callback?: string } }>(
+    "/auth/login",
+    async (request, reply) => {
+      const { userId } = request.body;
+      const { callback } = request.query;
+      const db = (fastify as unknown as { db: ReturnType<typeof import("@repo/shared/db/client").getDb> }).db;
 
-    // Get user
-    const [user] = await db.select().from(users).where(eq(users.user_id, userId));
+      // Get user with role and org_id from users table directly
+      const [user] = await db.select().from(users).where(eq(users.user_id, userId));
 
-    if (!user) {
-      reply.status(404).send({ error: "User not found" });
-      return;
-    }
+      if (!user) {
+        reply.status(404).send({ error: "User not found" });
+        return;
+      }
 
-    // Check if this is a platform-level user (SUPPORT or SUPER_ADMIN)
-    const [platformUser] = await db.select().from(platformUsers).where(eq(platformUsers.user_id, userId));
-
-    let role: UserRole;
-    let orgId: string | null;
-
-    if (platformUser) {
-      // Platform user - role from platform_users table, no org membership
-      role = platformUser.role as UserRole;
-      orgId = null;
-    } else {
-      // Regular org user - get membership
-      const [membership] = await db
-        .select({
-          orgId: orgMembers.org_id,
-          role: orgMembers.role,
-        })
-        .from(orgMembers)
-        .where(eq(orgMembers.user_id, userId));
-
-      role = mapDbRoleToUserRole(membership?.role || null);
-      orgId = membership?.orgId || null;
-    }
-
-    // Create JWT
-    const payload: JWTPayload = {
-      sub: user.user_id,
-      email: user.email || "",
-      name: user.display_name || user.email || user.user_id,
-      org_id: orgId,
-      role,
-    };
-
-    const token = await new SignJWT(payload)
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setIssuer(JWT_ISSUER)
-      .setAudience(JWT_AUDIENCE)
-      .setExpirationTime(JWT_EXPIRATION)
-      .sign(JWT_SECRET);
-
-    // Set cookie
-    reply.setCookie(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
-    });
-
-    return {
-      success: true,
-      user: {
-        userId: user.user_id,
-        email: user.email,
+      // Create JWT with role and org_id from users table
+      const payload: JWTPayload = {
+        sub: user.user_id,
+        email: user.email || "",
         name: user.display_name || user.email || user.user_id,
-        orgId,
-        role,
-      },
-      token,
-    };
-  });
+        org_id: user.org_id,
+        role: user.role as UserRole,
+      };
+
+      const token = await new SignJWT(payload)
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setIssuer(JWT_ISSUER)
+        .setAudience(JWT_AUDIENCE)
+        .setExpirationTime(JWT_EXPIRATION)
+        .sign(JWT_SECRET);
+
+      // Set cookie
+      reply.setCookie(COOKIE_NAME, token, {
+        httpOnly: false, // Allow client-side access for parsing user info
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24, // 24 hours
+      });
+
+      // If callback URL provided, redirect to it
+      if (callback) {
+        reply.redirect(callback);
+        return;
+      }
+
+      return {
+        success: true,
+        user: {
+          userId: user.user_id,
+          email: user.email,
+          name: user.display_name || user.email || user.user_id,
+          orgId: user.org_id,
+          role: user.role as UserRole,
+        },
+        token,
+      };
+    }
+  );
+
+  /**
+   * GET /auth/login - Login via GET with user ID and callback
+   * Used by DevAuthSwitcher to trigger login with redirect.
+   */
+  fastify.get<{ Querystring: { userId?: string; callback?: string } }>(
+    "/auth/login",
+    async (request, reply) => {
+      const { userId, callback } = request.query;
+      const db = (fastify as unknown as { db: ReturnType<typeof import("@repo/shared/db/client").getDb> }).db;
+
+      // If no userId, return first user as default
+      const [user] = userId
+        ? await db.select().from(users).where(eq(users.user_id, userId))
+        : await db.select().from(users).limit(1);
+
+      if (!user) {
+        reply.status(404).send({ error: "User not found" });
+        return;
+      }
+
+      // Create JWT with role and org_id from users table
+      const payload: JWTPayload = {
+        sub: user.user_id,
+        email: user.email || "",
+        name: user.display_name || user.email || user.user_id,
+        org_id: user.org_id,
+        role: user.role as UserRole,
+      };
+
+      const token = await new SignJWT(payload)
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setIssuer(JWT_ISSUER)
+        .setAudience(JWT_AUDIENCE)
+        .setExpirationTime(JWT_EXPIRATION)
+        .sign(JWT_SECRET);
+
+      // Set cookie
+      reply.setCookie(COOKIE_NAME, token, {
+        httpOnly: false, // Allow client-side access for parsing user info
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24, // 24 hours
+      });
+
+      // If callback URL provided, redirect to it
+      if (callback) {
+        reply.redirect(callback);
+        return;
+      }
+
+      return {
+        success: true,
+        user: {
+          userId: user.user_id,
+          email: user.email,
+          name: user.display_name || user.email || user.user_id,
+          orgId: user.org_id,
+          role: user.role as UserRole,
+        },
+        token,
+      };
+    }
+  );
 
   /**
    * POST /auth/logout - Clear auth cookie
    */
-  fastify.post("/auth/logout", async (request, reply) => {
+  fastify.post("/auth/logout", async (_request, reply) => {
     reply.clearCookie(COOKIE_NAME, { path: "/" });
     return { success: true };
   });
@@ -155,7 +193,7 @@ export async function authRoute(fastify: FastifyInstance) {
           role: payload.role,
         },
       };
-    } catch (err) {
+    } catch {
       reply.status(401).send({ error: "Invalid token" });
       return;
     }
@@ -188,13 +226,13 @@ export async function authRoute(fastify: FastifyInstance) {
           role: payload.role,
         },
       };
-    } catch (err) {
+    } catch {
       return { valid: false, error: "Invalid or expired token" };
     }
   });
 
   /**
-   * POST /auth/switch-org - Switch org context (for SUPPORT/SUPER_ADMIN)
+   * POST /auth/switch-org - Switch org context (for support/super_admin)
    */
   fastify.post<{ Body: { orgId: string | null } }>("/auth/switch-org", async (request, reply) => {
     const { orgId } = request.body;
@@ -213,8 +251,8 @@ export async function authRoute(fastify: FastifyInstance) {
 
       const role = payload.role as UserRole;
 
-      // Only SUPPORT and SUPER_ADMIN can switch orgs
-      if (role !== "SUPPORT" && role !== "SUPER_ADMIN") {
+      // Only support and super_admin can switch orgs
+      if (role !== "support" && role !== "super_admin") {
         reply.status(403).send({ error: "Not authorized to switch org context" });
         return;
       }
@@ -234,7 +272,7 @@ export async function authRoute(fastify: FastifyInstance) {
         success: true,
         currentOrgId: orgId,
       };
-    } catch (err) {
+    } catch {
       reply.status(401).send({ error: "Invalid token" });
       return;
     }

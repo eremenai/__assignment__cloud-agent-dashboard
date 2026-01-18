@@ -58,7 +58,7 @@ export function createUser(overrides: Partial<User> = {}): User {
     orgId: "org-test",
     email: `${id}@test.com`,
     name: "Test User",
-    role: "MEMBER" as UserRole,
+    role: "member" as UserRole,
     createdAt: new Date("2024-01-01"),
     lastActiveAt: new Date(),
     ...overrides,
@@ -71,7 +71,7 @@ export function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
     userId: id,
     email: `${id}@test.com`,
     name: "Test User",
-    role: "MEMBER" as UserRole,
+    role: "member" as UserRole,
     orgId: "org-test",
     ...overrides,
   };

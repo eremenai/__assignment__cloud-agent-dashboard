@@ -11,13 +11,13 @@ import { runFacts, sessionStats, type eventsRaw } from "@repo/shared/db/schema";
 import { POST_HANDOFF_WINDOW_MS } from "@repo/shared/types";
 import { and, eq, gt, lte, sql } from "drizzle-orm";
 import { updateDailyStats } from "./daily-stats.js";
-import type { DbTransaction } from "./types.js";
+import { type DbTransaction, ensureDate, toIsoString } from "./types.js";
 
 export async function projectLocalHandoff(
   tx: DbTransaction,
   event: typeof eventsRaw.$inferSelect
 ): Promise<void> {
-  const occurredAt = event.occurred_at;
+  const occurredAt = ensureDate(event.occurred_at);
 
   // Get current session stats to check if this is the first handoff
   const currentStats = await tx.execute(sql`
@@ -26,13 +26,10 @@ export async function projectLocalHandoff(
     WHERE org_id = ${event.org_id} AND session_id = ${event.session_id}
   `);
 
-  const rows = currentStats as unknown as { handoffs_count: number; first_message_at: Date | null }[];
+  const rows = currentStats as unknown as { handoffs_count: number; first_message_at: Date | string | null }[];
   const isFirstHandoff = rows.length === 0 || rows[0].handoffs_count === 0;
   const sessionDay = rows[0]?.first_message_at
-    ? (rows[0].first_message_at instanceof Date
-        ? rows[0].first_message_at
-        : new Date(rows[0].first_message_at)
-      ).toISOString().split("T")[0]
+    ? ensureDate(rows[0].first_message_at).toISOString().split("T")[0]
     : occurredAt.toISOString().split("T")[0];
 
   // Update session_stats
@@ -49,8 +46,8 @@ export async function projectLocalHandoff(
     .onConflictDoUpdate({
       target: [sessionStats.org_id, sessionStats.session_id],
       set: {
-        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${occurredAt})`,
-        last_handoff_at: sql`GREATEST(${sessionStats.last_handoff_at}, ${occurredAt})`,
+        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${toIsoString(occurredAt)}::timestamp)`,
+        last_handoff_at: sql`GREATEST(${sessionStats.last_handoff_at}, ${toIsoString(occurredAt)}::timestamp)`,
         handoffs_count: sql`${sessionStats.handoffs_count} + 1`,
       },
     });
@@ -76,9 +73,10 @@ async function checkRetroactivePostHandoff(
   orgId: string,
   sessionId: string,
   userId: string,
-  handoffAt: Date
+  handoffAt: Date | string
 ): Promise<void> {
-  const windowEnd = new Date(handoffAt.getTime() + POST_HANDOFF_WINDOW_MS);
+  const handoffAtDate = ensureDate(handoffAt);
+  const windowEnd = new Date(handoffAtDate.getTime() + POST_HANDOFF_WINDOW_MS);
 
   // First check if the flag is already set (to avoid double-counting in daily aggregates)
   const currentStats = await tx.execute(sql`
@@ -87,7 +85,7 @@ async function checkRetroactivePostHandoff(
     WHERE org_id = ${orgId} AND session_id = ${sessionId}
   `);
 
-  const statsRows = currentStats as unknown as { has_post_handoff_iteration: boolean; first_message_at: Date | null }[];
+  const statsRows = currentStats as unknown as { has_post_handoff_iteration: boolean; first_message_at: Date | string | null }[];
   if (statsRows.length > 0 && statsRows[0].has_post_handoff_iteration) {
     // Already set, nothing to do
     return;
@@ -101,7 +99,7 @@ async function checkRetroactivePostHandoff(
       and(
         eq(runFacts.org_id, orgId),
         eq(runFacts.session_id, sessionId),
-        gt(runFacts.completed_at, handoffAt),
+        gt(runFacts.completed_at, handoffAtDate),
         lte(runFacts.completed_at, windowEnd)
       )
     )
@@ -119,11 +117,8 @@ async function checkRetroactivePostHandoff(
     // Attribute to the day of first_message_at
     if (statsRows.length > 0) {
       const sessionDay = statsRows[0].first_message_at
-        ? (statsRows[0].first_message_at instanceof Date
-            ? statsRows[0].first_message_at
-            : new Date(statsRows[0].first_message_at)
-          ).toISOString().split("T")[0]
-        : handoffAt.toISOString().split("T")[0];
+        ? ensureDate(statsRows[0].first_message_at).toISOString().split("T")[0]
+        : handoffAtDate.toISOString().split("T")[0];
 
       await updateDailyStats(tx, orgId, userId, sessionDay, {
         sessions_with_post_handoff: 1,

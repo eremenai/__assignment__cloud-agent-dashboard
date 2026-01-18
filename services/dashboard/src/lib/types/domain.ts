@@ -10,8 +10,10 @@
 // Enums / Union Types
 // ============================================================================
 
-// UserRole uses UPPERCASE to match auth convention (RBAC standard)
-export type UserRole = "MEMBER" | "MANAGER" | "ORG_ADMIN" | "SUPPORT" | "SUPER_ADMIN";
+// Roles use lowercase to match database storage directly (no mapping needed)
+// - 'admin', 'manager', 'member' are org-scoped roles (require org_id)
+// - 'support', 'super_admin' are global roles (org_id must be null)
+export type UserRole = "member" | "manager" | "admin" | "support" | "super_admin";
 
 // Backend uses lowercase for status values stored in DB
 export type RunStatus = "success" | "fail" | "timeout" | "cancelled";
@@ -39,7 +41,7 @@ export interface Organization {
 
 export interface User {
   userId: string;
-  orgId: string | null; // null for platform roles (SUPPORT, SUPER_ADMIN)
+  orgId: string | null; // null for global roles (support, super_admin)
   email: string;
   name: string;
   role: UserRole;

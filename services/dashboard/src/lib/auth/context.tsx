@@ -4,12 +4,12 @@
  * Authentication context provider.
  * Manages user state from JWT claims, org context switching, and permissions.
  *
- * In development mode:
- * - User data comes from JWT cookie set by mock-auth service
- * - DevAuthSwitcher component handles user switching via mock-auth-client
+ * Initial user is parsed from JWT on the server and passed as a prop.
+ * In development mode, DevAuthSwitcher handles user switching via mock-auth-client,
+ * and this provider polls for cookie changes to detect user switches.
  */
 
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import type { AuthContextValue, AuthUser, Permission } from "@/lib/types/auth";
 import { canSwitchOrg, canViewAllOrgData, ROLE_PERMISSIONS } from "@/lib/types/auth";
@@ -27,12 +27,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY_ORG = "dev-auth-org-id";
 
 // ============================================================================
-// JWT Parsing
+// JWT Parsing (client-side, for dev mode user switching)
 // ============================================================================
 
 /**
- * Parse JWT token from cookie.
- * This is a simple base64 decode - actual verification happens on the server.
+ * Parse JWT token from cookie on the client.
+ * Used only for dev mode user switching detection.
  */
 function parseJwtFromCookie(): AuthUser | null {
   if (typeof document === "undefined") return null;
@@ -46,11 +46,9 @@ function parseJwtFromCookie(): AuthUser | null {
   if (!token) return null;
 
   try {
-    // JWT is base64url encoded, split by "."
     const parts = token.split(".");
     if (parts.length !== 3) return null;
 
-    // Decode payload (second part)
     const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
 
     return {
@@ -71,43 +69,34 @@ function parseJwtFromCookie(): AuthUser | null {
 
 interface AuthProviderProps {
   children: ReactNode;
-  /** Initial user for testing (bypasses JWT parsing) */
-  initialUser?: AuthUser;
+  /** Initial user parsed from JWT on the server */
+  initialUser: AuthUser | null;
 }
 
 export function AuthProvider({ children, initialUser }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(initialUser ?? null);
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
   const [currentOrgId, setCurrentOrgIdState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(!initialUser);
+  const [isLoading] = useState(false);
+  const lastUserIdRef = useRef<string | null>(initialUser?.userId ?? null);
 
-  // Initialize authentication from JWT on mount
+  // Initialize org context from localStorage on mount
   useEffect(() => {
-    if (initialUser) return;
+    if (!user) return;
 
-    function initFromJwt() {
-      const jwtUser = parseJwtFromCookie();
-
-      if (jwtUser) {
-        setUser(jwtUser);
-
-        // Restore org context for platform users
-        if (canSwitchOrg(jwtUser.role)) {
-          const storedOrgId = localStorage.getItem(STORAGE_KEY_ORG);
-          setCurrentOrgIdState(storedOrgId === "null" ? null : storedOrgId);
-        } else {
-          setCurrentOrgIdState(jwtUser.orgId);
-        }
-      }
-
-      setIsLoading(false);
+    if (canSwitchOrg(user.role)) {
+      const storedOrgId = localStorage.getItem(STORAGE_KEY_ORG);
+      setCurrentOrgIdState(storedOrgId === "null" ? null : storedOrgId);
+    } else {
+      setCurrentOrgIdState(user.orgId);
     }
+  }, [user]);
 
-    initFromJwt();
-
-    // Re-parse JWT when cookie changes (user switched via DevAuthSwitcher)
+  // Poll for cookie changes in dev mode (for DevAuthSwitcher)
+  useEffect(() => {
     const handleCookieChange = () => {
       const jwtUser = parseJwtFromCookie();
-      if (jwtUser) {
+      if (jwtUser && jwtUser.userId !== lastUserIdRef.current) {
+        lastUserIdRef.current = jwtUser.userId;
         setUser(jwtUser);
         if (!canSwitchOrg(jwtUser.role)) {
           setCurrentOrgIdState(jwtUser.orgId);
@@ -115,13 +104,11 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
       }
     };
 
-    // Poll for cookie changes (there's no native cookie change event)
     const interval = setInterval(handleCookieChange, 1000);
-
     return () => clearInterval(interval);
-  }, [initialUser]);
+  }, []);
 
-  // Set current org context (for SUPPORT/SUPER_ADMIN)
+  // Set current org context (for support/super_admin)
   const setCurrentOrgId = useCallback(
     (orgId: string | null) => {
       if (!user) return;
@@ -140,9 +127,9 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
   // Switch user - this should be called after mock-auth login completes
   // The actual user data will come from the new JWT cookie
   const switchUser = useCallback(() => {
-    // Re-parse JWT after cookie is set by mock-auth
     const jwtUser = parseJwtFromCookie();
     if (jwtUser) {
+      lastUserIdRef.current = jwtUser.userId;
       setUser(jwtUser);
       if (canSwitchOrg(jwtUser.role)) {
         if (jwtUser.orgId === null) {
@@ -172,8 +159,8 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
     (sessionCreatedByUserId: string): boolean => {
       if (!user) return false;
 
-      // MEMBER can only view own sessions
-      if (user.role === "MEMBER") {
+      // member can only view own sessions
+      if (user.role === "member") {
         return sessionCreatedByUserId === user.userId;
       }
 
@@ -188,8 +175,8 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
     (targetUserId: string): boolean => {
       if (!user) return false;
 
-      // MEMBER can only view own profile
-      if (user.role === "MEMBER") {
+      // member can only view own profile
+      if (user.role === "member") {
         return targetUserId === user.userId;
       }
 

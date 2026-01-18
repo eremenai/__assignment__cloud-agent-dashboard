@@ -6,7 +6,7 @@
  */
 
 import type { getDb } from "@repo/shared/db/client";
-import { eventsQueue, eventsRaw } from "@repo/shared/db/schema";
+import { eventsQueue, type eventsRaw } from "@repo/shared/db/schema";
 import type { EventType } from "@repo/shared/types";
 import { and, eq, sql } from "drizzle-orm";
 import { projectLocalHandoff } from "./projectors/handoff.js";

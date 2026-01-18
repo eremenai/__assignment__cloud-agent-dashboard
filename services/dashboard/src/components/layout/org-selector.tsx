@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * Organization selector for SUPPORT and SUPER_ADMIN users.
+ * Organization selector for support and super_admin users.
  * Allows switching between organizations to view their data.
+ * Fetches organizations from mock-auth service.
  */
 
-import { Building2, ChevronDown, Globe } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, ChevronDown, Globe, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,30 +18,56 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getAllOrganizations } from "@/dev/mock-data";
 import { useAuth } from "@/lib/auth";
+import { fetchMockAuthOrgs } from "@/lib/auth/mock-auth-client";
 import { canSwitchOrg, canViewGlobal } from "@/lib/types/auth";
 import { cn } from "@/lib/utils";
 
+interface Org {
+  orgId: string;
+  name: string;
+}
+
 export function OrgSelector() {
   const { user, currentOrgId, setCurrentOrgId } = useAuth();
+  const [organizations, setOrganizations] = useState<Org[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Only show for SUPPORT and SUPER_ADMIN
+  // Fetch organizations from mock-auth service
+  useEffect(() => {
+    async function loadOrgs() {
+      try {
+        const orgs = await fetchMockAuthOrgs();
+        setOrganizations(orgs);
+      } catch (err) {
+        console.warn("Failed to fetch organizations:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadOrgs();
+  }, []);
+
+  // Only show for support and super_admin
   if (!user || !canSwitchOrg(user.role)) {
     return null;
   }
 
-  const organizations = getAllOrganizations();
   const currentOrg = currentOrgId ? organizations.find((o) => o.orgId === currentOrgId) : null;
-
   const canViewGlobalOverview = canViewGlobal(user.role);
   const isGlobalView = currentOrgId === null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          {isGlobalView ? (
+        <Button variant="outline" className="gap-2" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              <span>Loading...</span>
+            </>
+          ) : isGlobalView ? (
             <>
               <Globe className="size-4" />
               <span>All Organizations</span>

@@ -255,11 +255,12 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ### 17. Teams Feature Deferred
 
-**Current state:** Data model supports teams (`org_members.team_id`), but UI doesn't expose it. Users see org-level or individual views only.
+**Current state:** Data model does not include teams. Users see org-level or individual views only.
 
-**Tradeoff:** Simplified V1 scope. Can add later without schema changes.
+**Tradeoff:** Simplified V1 scope. Can add later with schema migration.
 
 **Future step:**
+- Add `team_id` column to `users` table or create `teams` table
 - Add team management UI
 - Team-scoped dashboards
 - Team-level permissions

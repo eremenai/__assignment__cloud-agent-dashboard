@@ -10,13 +10,13 @@
 import { sessionStats, type eventsRaw } from "@repo/shared/db/schema";
 import { sql } from "drizzle-orm";
 import { updateDailyStats } from "./daily-stats.js";
-import type { DbTransaction } from "./types.js";
+import { type DbTransaction, ensureDate, toIsoString } from "./types.js";
 
 export async function projectMessageCreated(
   tx: DbTransaction,
   event: typeof eventsRaw.$inferSelect
 ): Promise<void> {
-  const occurredAt = event.occurred_at;
+  const occurredAt = ensureDate(event.occurred_at);
 
   // Check if this is a new session (no existing row in session_stats)
   const existingSession = await tx.execute(sql`
@@ -42,9 +42,9 @@ export async function projectMessageCreated(
       target: [sessionStats.org_id, sessionStats.session_id],
       set: {
         // Use LEAST for first_message_at (keep earliest)
-        first_message_at: sql`LEAST(${sessionStats.first_message_at}, ${occurredAt})`,
+        first_message_at: sql`LEAST(${sessionStats.first_message_at}, ${toIsoString(occurredAt)}::timestamp)`,
         // Use GREATEST for last_event_at (keep latest)
-        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${occurredAt})`,
+        last_event_at: sql`GREATEST(${sessionStats.last_event_at}, ${toIsoString(occurredAt)}::timestamp)`,
         // Set user_id if not already set
         user_id: sql`COALESCE(${sessionStats.user_id}, ${event.user_id})`,
       },

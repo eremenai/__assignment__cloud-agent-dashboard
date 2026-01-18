@@ -17,8 +17,6 @@ import {
   type UserListItem,
 } from "../db/queries";
 
-const USE_REAL_DB = process.env.USE_REAL_DB === "true";
-
 /**
  * Get paginated users list.
  */
@@ -26,18 +24,8 @@ export async function fetchUsersList(
   orgId: string,
   timeRange: TimeRangeParams,
   pagination: PaginationParams,
-  sort: SortParams
+  _sort: SortParams
 ): Promise<UsersListResponse> {
-  if (!USE_REAL_DB) {
-    const { getUsersList } = await import("@/dev/mock-api");
-    return getUsersList(
-      orgId,
-      timeRange,
-      pagination,
-      sort
-    );
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
   const offset = (pagination.page - 1) * pagination.pageSize;
@@ -49,7 +37,6 @@ export async function fetchUsersList(
   // Calculate summary
   const totalSessions = users.reduce((sum, u) => sum + u.sessionCount, 0);
   const totalCostCents = users.reduce((sum, u) => sum + u.totalCostCents, 0);
-  // Note: usersWithHandoffs could be used for future metrics
   const avgHandoffRate =
     users.length > 0 ? users.reduce((sum, u) => sum + (u.handoffRate ?? 0), 0) / users.length : 0;
 
@@ -80,13 +67,6 @@ export async function fetchUserDetail(
   userId: string,
   timeRange: TimeRangeParams
 ): Promise<UserDetailResponse | null> {
-  if (!USE_REAL_DB) {
-    const { getUserDetail } = await import("@/dev/mock-api");
-    return getUserDetail(userId, timeRange);
-  }
-
-  // For now, fetch from users list and find the user
-  // A more efficient implementation would have a dedicated query
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 
@@ -129,7 +109,7 @@ function transformUserListItem(item: UserListItem): UserWithMetrics {
     userId: item.userId,
     email: item.email ?? `${item.userId}@example.com`,
     displayName: item.displayName ?? item.userId,
-    role: "MEMBER", // Would need to join org_members
+    role: "member", // Default role - actual role should come from users table
     orgId: "", // Set by caller if needed
     createdAt: new Date(), // Would need user created_at
     lastActiveAt: new Date(), // Would need last activity

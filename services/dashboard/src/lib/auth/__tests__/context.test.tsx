@@ -37,11 +37,7 @@ describe("AuthContext", () => {
     localStorageMock.clear();
   });
 
-  function wrapper({ children }: { children: ReactNode }) {
-    return <AuthProvider>{children}</AuthProvider>;
-  }
-
-  function wrapperWithUser(user: ReturnType<typeof createAuthUser>) {
+  function wrapperWithUser(user: ReturnType<typeof createAuthUser> | null) {
     return function Wrapper({ children }: { children: ReactNode }) {
       return <AuthProvider initialUser={user}>{children}</AuthProvider>;
     };
@@ -58,15 +54,12 @@ describe("AuthContext", () => {
     spy.mockRestore();
   });
 
-  it("should provide default user from dev users", async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    // Wait for initialization
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+  it("should have null user when initialUser is null", () => {
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: wrapperWithUser(null),
     });
 
-    expect(result.current.user).not.toBeNull();
+    expect(result.current.user).toBeNull();
     expect(result.current.isLoading).toBe(false);
   });
 
@@ -74,7 +67,7 @@ describe("AuthContext", () => {
     const testUser = createAuthUser({
       userId: "test-user",
       name: "Test User",
-      role: "ORG_ADMIN",
+      role: "admin",
       orgId: "org-test",
     });
 
@@ -87,8 +80,8 @@ describe("AuthContext", () => {
   });
 
   describe("permissions", () => {
-    it("should check MEMBER permissions correctly", () => {
-      const user = createAuthUser({ role: "MEMBER" });
+    it("should check member permissions correctly", () => {
+      const user = createAuthUser({ role: "member" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -100,8 +93,8 @@ describe("AuthContext", () => {
       expect(result.current.can("view_global_overview")).toBe(false);
     });
 
-    it("should check MANAGER permissions correctly", () => {
-      const user = createAuthUser({ role: "MANAGER" });
+    it("should check manager permissions correctly", () => {
+      const user = createAuthUser({ role: "manager" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -112,8 +105,8 @@ describe("AuthContext", () => {
       expect(result.current.can("switch_org_context")).toBe(false);
     });
 
-    it("should check SUPPORT permissions correctly", () => {
-      const user = createAuthUser({ role: "SUPPORT", orgId: null });
+    it("should check support permissions correctly", () => {
+      const user = createAuthUser({ role: "support", orgId: null });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -122,8 +115,8 @@ describe("AuthContext", () => {
       expect(result.current.can("view_global_overview")).toBe(false);
     });
 
-    it("should check SUPER_ADMIN permissions correctly", () => {
-      const user = createAuthUser({ role: "SUPER_ADMIN", orgId: null });
+    it("should check super_admin permissions correctly", () => {
+      const user = createAuthUser({ role: "super_admin", orgId: null });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -134,8 +127,8 @@ describe("AuthContext", () => {
   });
 
   describe("canViewSession", () => {
-    it("should allow MEMBER to view only own sessions", () => {
-      const user = createAuthUser({ userId: "user-1", role: "MEMBER" });
+    it("should allow member to view only own sessions", () => {
+      const user = createAuthUser({ userId: "user-1", role: "member" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -144,8 +137,8 @@ describe("AuthContext", () => {
       expect(result.current.canViewSession("user-2")).toBe(false);
     });
 
-    it("should allow MANAGER to view all sessions", () => {
-      const user = createAuthUser({ userId: "user-1", role: "MANAGER" });
+    it("should allow manager to view all sessions", () => {
+      const user = createAuthUser({ userId: "user-1", role: "manager" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -156,8 +149,8 @@ describe("AuthContext", () => {
   });
 
   describe("canViewUser", () => {
-    it("should allow MEMBER to view only own profile", () => {
-      const user = createAuthUser({ userId: "user-1", role: "MEMBER" });
+    it("should allow member to view only own profile", () => {
+      const user = createAuthUser({ userId: "user-1", role: "member" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -166,8 +159,8 @@ describe("AuthContext", () => {
       expect(result.current.canViewUser("user-2")).toBe(false);
     });
 
-    it("should allow ORG_ADMIN to view all users", () => {
-      const user = createAuthUser({ userId: "user-1", role: "ORG_ADMIN" });
+    it("should allow admin to view all users", () => {
+      const user = createAuthUser({ userId: "user-1", role: "admin" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -178,8 +171,8 @@ describe("AuthContext", () => {
   });
 
   describe("org context switching", () => {
-    it("should not allow MEMBER to switch org", () => {
-      const user = createAuthUser({ role: "MEMBER", orgId: "org-1" });
+    it("should not allow member to switch org", () => {
+      const user = createAuthUser({ role: "member", orgId: "org-1" });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });
@@ -194,8 +187,8 @@ describe("AuthContext", () => {
       expect(result.current.currentOrgId).toBe(initialOrgId);
     });
 
-    it("should allow SUPER_ADMIN to switch org", () => {
-      const user = createAuthUser({ role: "SUPER_ADMIN", orgId: null });
+    it("should allow super_admin to switch org", () => {
+      const user = createAuthUser({ role: "super_admin", orgId: null });
       const { result } = renderHook(() => useAuth(), {
         wrapper: wrapperWithUser(user),
       });

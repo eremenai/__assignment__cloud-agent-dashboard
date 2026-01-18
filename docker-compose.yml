@@ -1,5 +1,7 @@
-# Development Docker Compose
+# Docker Compose - Full stack with ephemeral database
 # Run: docker compose up -d
+# With dashboard: docker compose --profile dashboard up -d
+# With generator: docker compose --profile generator up -d
 
 services:
   db:
@@ -40,5 +42,61 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  ingest:
+    build:
+      context: .
+      dockerfile: services/ingest/Dockerfile
+    environment:
+      DATABASE_URL: postgres://analytics:analytics@db:5432/analytics
+      PORT: 3001
+      LOG_LEVEL: info
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgres://analytics:analytics@db:5432/analytics
+      WORKER_POLL_INTERVAL_MS: 2000
+      WORKER_BATCH_SIZE: 100
+    depends_on:
+      db:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    environment:
+      DATABASE_URL: postgres://analytics:analytics@db:5432/analytics
+      NEXT_PUBLIC_MOCK_AUTH_URL: http://localhost:3002
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mock-auth:
+        condition: service_healthy
+    profiles:
+      - dashboard
+
+  generator:
+    build:
+      context: .
+      dockerfile: tools/generator/Dockerfile
+    environment:
+      INGEST_URL: http://ingest:3001/events
+    # Default: generate 1 year of data. Override with: docker compose run generator --days 30
+    command: ["--days", "365"]
+    depends_on:
+      - ingest
+    profiles:
+      - generator
 
 # No named volumes - database is ephemeral

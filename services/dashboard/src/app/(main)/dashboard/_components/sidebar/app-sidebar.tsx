@@ -4,7 +4,7 @@ import { useMemo } from "react";
 
 import Link from "next/link";
 
-import { Activity } from "lucide-react";
+import { Activity, Globe, LayoutDashboard, type LucideIcon, MessageSquare, Users } from "lucide-react";
 
 import { DevAuthSwitcher } from "@/components/auth/dev-auth-switcher";
 import {
@@ -18,16 +18,81 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
 import { useAuth } from "@/lib/auth";
-import { filterNavItems, sidebarItems } from "@/navigation/sidebar/sidebar-items";
+import type { UserRole } from "@/lib/types/domain";
 
 import { NavMain } from "./nav-main";
+
+// ============================================================================
+// Navigation Types
+// ============================================================================
+
+interface NavSubItem {
+  title: string;
+  url: string;
+  icon?: LucideIcon;
+  comingSoon?: boolean;
+  newTab?: boolean;
+  isNew?: boolean;
+}
+
+interface NavMainItem {
+  title: string;
+  url: string;
+  icon?: LucideIcon;
+  subItems?: NavSubItem[];
+  comingSoon?: boolean;
+  newTab?: boolean;
+  isNew?: boolean;
+  visibleTo?: UserRole[];
+}
+
+export interface NavGroup {
+  id: number;
+  label?: string;
+  items: NavMainItem[];
+  visibleTo?: UserRole[];
+}
+
+// ============================================================================
+// Navigation Items
+// ============================================================================
+
+const sidebarItems: NavGroup[] = [
+  {
+    id: 1,
+    label: "Analytics",
+    items: [
+      { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Sessions", url: "/sessions", icon: MessageSquare },
+      { title: "Users", url: "/users", icon: Users },
+    ],
+  },
+  {
+    id: 2,
+    label: "Platform",
+    visibleTo: ["super_admin"],
+    items: [
+      { title: "Global Overview", url: "/global", icon: Globe, visibleTo: ["super_admin"] },
+    ],
+  },
+];
+
+// ============================================================================
+// Component
+// ============================================================================
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
 
   const filteredItems = useMemo(() => {
     if (!user) return [];
-    return filterNavItems(sidebarItems, user.role);
+    return sidebarItems
+      .filter((group) => !group.visibleTo || group.visibleTo.includes(user.role))
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.visibleTo || item.visibleTo.includes(user.role)),
+      }))
+      .filter((group) => group.items.length > 0);
   }, [user]);
 
   return (
@@ -48,7 +113,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={filteredItems} />
       </SidebarContent>
       <SidebarFooter>
-        <DevAuthSwitcher variant="sidebar" />
+        <DevAuthSwitcher />
       </SidebarFooter>
     </Sidebar>
   );

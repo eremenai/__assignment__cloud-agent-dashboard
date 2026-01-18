@@ -32,24 +32,24 @@ describe("Test Factories", () => {
   it("should create a user with defaults", () => {
     const user = createUser();
     expect(user.userId).toMatch(/^user-test-\d+$/);
-    expect(user.role).toBe("MEMBER");
+    expect(user.role).toBe("member");
     expect(user.orgId).toBe("org-test");
   });
 
   it("should create a user with overrides", () => {
     const user = createUser({
       name: "Custom Name",
-      role: "ORG_ADMIN",
+      role: "admin",
       orgId: "org-custom",
     });
     expect(user.name).toBe("Custom Name");
-    expect(user.role).toBe("ORG_ADMIN");
+    expect(user.role).toBe("admin");
     expect(user.orgId).toBe("org-custom");
   });
 
   it("should create an auth user", () => {
-    const authUser = createAuthUser({ role: "SUPER_ADMIN", orgId: null });
-    expect(authUser.role).toBe("SUPER_ADMIN");
+    const authUser = createAuthUser({ role: "super_admin", orgId: null });
+    expect(authUser.role).toBe("super_admin");
     expect(authUser.orgId).toBeNull();
   });
 

@@ -490,7 +490,7 @@ describe("Processor", () => {
     it("uses SELECT FOR UPDATE SKIP LOCKED inside per-event transaction", async () => {
       mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
 
-      let txExecuteCalls: unknown[] = [];
+      const txExecuteCalls: unknown[] = [];
       mockTransaction.mockImplementation(async (fn) => {
         const txExecute = vi.fn().mockImplementation((sqlArg) => {
           txExecuteCalls.push(sqlArg);

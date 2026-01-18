@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { getAuthUser } from "@/lib/auth/jwt-server";
 import { cn } from "@/lib/utils";
 
 import { BreadcrumbsNav } from "./dashboard/_components/breadcrumbs-nav";
@@ -13,9 +14,10 @@ import { DashboardLayoutClient, HeaderControls } from "./dashboard/_components/d
 export default async function MainLayout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
+  const initialUser = await getAuthUser(cookieStore);
 
   return (
-    <DashboardLayoutClient>
+    <DashboardLayoutClient initialUser={initialUser}>
       <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar />
         <SidebarInset

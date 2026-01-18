@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 const roleBadgeVariants = cva("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", {
   variants: {
     role: {
-      MEMBER: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-      MANAGER: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-      ORG_ADMIN: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-      SUPPORT: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-      SUPER_ADMIN: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+      member: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+      manager: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+      admin: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+      support: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+      super_admin: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     },
   },
   defaultVariants: {
-    role: "MEMBER",
+    role: "member",
   },
 });
 

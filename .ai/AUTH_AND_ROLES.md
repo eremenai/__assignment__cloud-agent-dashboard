@@ -95,46 +95,39 @@ These roles are scoped to a single organization:
 Dev users are defined in the database, not hardcoded. The mock-auth service reads
 from the database to provide the list of available users for the DevAuthSwitcher.
 
-### Database Tables for RBAC
+### Database Schema for RBAC
+
+The `users` table stores role and org_id directly (no separate membership tables):
 
 ```sql
--- Organization membership (org-level roles)
-CREATE TABLE org_members (
-  org_id     TEXT NOT NULL REFERENCES orgs(org_id),
-  user_id    TEXT NOT NULL REFERENCES users(user_id),
-  role       TEXT NOT NULL,  -- 'admin', 'manager', 'member'
-  PRIMARY KEY (org_id, user_id)
-);
-
--- Platform-level users (SUPPORT, SUPER_ADMIN)
-CREATE TABLE platform_users (
-  user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
-  role       TEXT NOT NULL CHECK (role IN ('SUPPORT', 'SUPER_ADMIN'))
+CREATE TABLE users (
+  user_id      TEXT PRIMARY KEY,
+  email        TEXT UNIQUE,
+  display_name TEXT,
+  org_id       TEXT REFERENCES orgs(org_id),  -- NULL for platform roles
+  role         TEXT NOT NULL DEFAULT 'member', -- admin | manager | member | support | super_admin
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-### Role Resolution Logic
+### Role Values
 
-1. Check `platform_users` table first - if user exists, use platform role
-2. Otherwise, check `org_members` table for org-level role
-3. Map database roles to UserRole enum:
-   - `admin` → `ORG_ADMIN`
-   - `manager` → `MANAGER`
-   - `member` → `MEMBER`
+- `admin`, `manager`, `member` are org-scoped roles (require org_id)
+- `support`, `super_admin` are platform roles (org_id must be NULL)
 
 ### Sample Seed Data (see scripts/seed-orgs-users.sql)
 
 ```sql
--- Platform users
-INSERT INTO platform_users (user_id, role) VALUES
-  ('user_support_1', 'SUPPORT'),
-  ('user_admin_1', 'SUPER_ADMIN');
+-- Org-scoped users
+INSERT INTO users (user_id, email, display_name, org_id, role) VALUES
+  ('user_small_1', 'alice@smallstartup.com', 'Alice Chen', 'org_small', 'admin'),
+  ('user_med_2', 'diana@mediumteam.com', 'Diana Ross', 'org_medium', 'manager'),
+  ('user_large_3', 'jack@largecorp.com', 'Jack Cooper', 'org_large', 'member');
 
--- Org users (via org_members)
-INSERT INTO org_members (org_id, user_id, role) VALUES
-  ('org_small', 'user_small_1', 'admin'),
-  ('org_medium', 'user_med_2', 'manager'),
-  ('org_large', 'user_large_3', 'member');
+-- Platform users (no org_id)
+INSERT INTO users (user_id, email, display_name, org_id, role) VALUES
+  ('user_support_1', 'eve.support@platform.com', 'Eve Support', NULL, 'support'),
+  ('user_admin_1', 'frank.admin@platform.com', 'Frank Super', NULL, 'super_admin');
 ```
 
 ---

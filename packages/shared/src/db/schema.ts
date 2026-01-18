@@ -32,40 +32,19 @@ export const orgs = pgTable("orgs", {
 
 /**
  * Users table.
+ *
+ * Roles are stored in lowercase:
+ * - 'admin', 'manager', 'member' are org-scoped roles (require org_id)
+ * - 'support', 'super_admin' are global roles (org_id must be null)
+ *
+ * If org_id is null and role is not 'support' or 'super_admin', the role is ignored.
  */
 export const users = pgTable("users", {
   user_id: text("user_id").primaryKey(),
   email: text("email").unique(),
   display_name: text("display_name"),
-  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-/**
- * Organization membership table.
- */
-export const orgMembers = pgTable(
-  "org_members",
-  {
-    org_id: text("org_id")
-      .notNull()
-      .references(() => orgs.org_id),
-    user_id: text("user_id")
-      .notNull()
-      .references(() => users.user_id),
-    role: text("role").notNull(), // "admin" | "member" | "viewer"
-    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [primaryKey({ columns: [table.org_id, table.user_id] })]
-);
-
-/**
- * Platform-level users (SUPPORT, SUPER_ADMIN) who operate across organizations.
- */
-export const platformUsers = pgTable("platform_users", {
-  user_id: text("user_id")
-    .primaryKey()
-    .references(() => users.user_id),
-  role: text("role").notNull(), // "SUPPORT" | "SUPER_ADMIN"
+  org_id: text("org_id").references(() => orgs.org_id), // null for global roles
+  role: text("role").notNull().default("member"), // admin | manager | member | support | super_admin
   created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -251,12 +230,6 @@ export type NewOrg = typeof orgs.$inferInsert;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-
-export type OrgMember = typeof orgMembers.$inferSelect;
-export type NewOrgMember = typeof orgMembers.$inferInsert;
-
-export type PlatformUser = typeof platformUsers.$inferSelect;
-export type NewPlatformUser = typeof platformUsers.$inferInsert;
 
 export type EventRaw = typeof eventsRaw.$inferSelect;
 export type NewEventRaw = typeof eventsRaw.$inferInsert;

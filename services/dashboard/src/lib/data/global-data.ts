@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Server actions for global (SUPER_ADMIN) data.
+ * Server actions for global (super_admin) data.
  */
 
 import type {
@@ -19,19 +19,12 @@ import {
   type TopOrgItem,
 } from "../db/queries";
 
-const USE_REAL_DB = process.env.USE_REAL_DB === "true";
-
 /**
  * Get global metrics (platform-wide KPIs).
  */
 export async function fetchGlobalMetrics(
   timeRange: TimeRangeParams
 ): Promise<GlobalMetricsResponse> {
-  if (!USE_REAL_DB) {
-    const { getGlobalMetrics } = await import("@/dev/mock-api");
-    return getGlobalMetrics(timeRange);
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 
@@ -43,18 +36,13 @@ export async function fetchGlobalMetrics(
 }
 
 /**
- * Get list of orgs with metrics for SUPER_ADMIN view.
+ * Get list of orgs with metrics for super_admin view.
  */
 export async function fetchGlobalOrgs(
   timeRange: TimeRangeParams,
   pagination: PaginationParams,
-  sort: SortParams
+  _sort: SortParams
 ): Promise<GlobalOrgsResponse> {
-  if (!USE_REAL_DB) {
-    const { getGlobalOrgs } = await import("@/dev/mock-api");
-    return getGlobalOrgs(pagination, sort);
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 

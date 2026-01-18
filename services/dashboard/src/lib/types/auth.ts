@@ -12,7 +12,7 @@ export interface JWTClaims {
   sub: string; // userId
   email: string;
   name: string;
-  org_id: string | null; // primary organization (null for platform roles)
+  org_id: string | null; // primary organization (null for global roles)
   role: UserRole;
   iat: number; // issued at
   exp: number; // expiration
@@ -36,15 +36,16 @@ export type Permission =
 /**
  * Permission matrix by role.
  * Each role has a set of permissions it grants.
+ * Note: roles use lowercase to match database storage.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  MEMBER: [
+  member: [
     "view_own_sessions",
     "view_session_details", // own only
     "view_org_aggregates",
     "view_user_details", // own only
   ],
-  MANAGER: [
+  manager: [
     "view_own_sessions",
     "view_org_sessions",
     "view_session_details",
@@ -53,7 +54,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "view_user_details",
     "export_data",
   ],
-  ORG_ADMIN: [
+  admin: [
     "view_own_sessions",
     "view_org_sessions",
     "view_session_details",
@@ -62,7 +63,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "view_user_details",
     "export_data",
   ],
-  SUPPORT: [
+  support: [
     "view_own_sessions",
     "view_org_sessions",
     "view_session_details",
@@ -72,7 +73,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "export_data",
     "switch_org_context",
   ],
-  SUPER_ADMIN: [
+  super_admin: [
     "view_own_sessions",
     "view_org_sessions",
     "view_session_details",
@@ -101,9 +102,9 @@ export interface AuthUser {
 export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  /** Current org being viewed. May differ from user's org for SUPPORT/SUPER_ADMIN. null = global view */
+  /** Current org being viewed. May differ from user's org for support/super_admin. null = global view */
   currentOrgId: string | null;
-  /** Set the current org context (SUPPORT/SUPER_ADMIN only) */
+  /** Set the current org context (support/super_admin only) */
   setCurrentOrgId: (orgId: string | null) => void;
   /** Check if user has a specific permission */
   can: (permission: Permission) => boolean;
@@ -120,23 +121,31 @@ export interface AuthContextValue {
 
 /**
  * Check if a role can switch org context.
+ * Only global roles (support, super_admin) can switch between orgs.
  */
 export function canSwitchOrg(role: UserRole): boolean {
-  return role === "SUPPORT" || role === "SUPER_ADMIN";
+  return role === "support" || role === "super_admin";
 }
 
 /**
  * Check if a role can view global overview.
  */
 export function canViewGlobal(role: UserRole): boolean {
-  return role === "SUPER_ADMIN";
+  return role === "super_admin";
 }
 
 /**
  * Check if a role can view all org data (not just own).
  */
 export function canViewAllOrgData(role: UserRole): boolean {
-  return role !== "MEMBER";
+  return role !== "member";
+}
+
+/**
+ * Check if a role is a global (non-org-scoped) role.
+ */
+export function isGlobalRole(role: UserRole): boolean {
+  return role === "support" || role === "super_admin";
 }
 
 /**
@@ -144,11 +153,11 @@ export function canViewAllOrgData(role: UserRole): boolean {
  */
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
-    MEMBER: "Member",
-    MANAGER: "Manager",
-    ORG_ADMIN: "Admin",
-    SUPPORT: "Support",
-    SUPER_ADMIN: "Super Admin",
+    member: "Member",
+    manager: "Manager",
+    admin: "Admin",
+    support: "Support",
+    super_admin: "Super Admin",
   };
   return labels[role];
 }
@@ -158,11 +167,11 @@ export function getRoleLabel(role: UserRole): string {
  */
 export function getRoleBadgeVariant(role: UserRole): "default" | "secondary" | "outline" {
   switch (role) {
-    case "SUPER_ADMIN":
-    case "ORG_ADMIN":
+    case "super_admin":
+    case "admin":
       return "default";
-    case "SUPPORT":
-    case "MANAGER":
+    case "support":
+    case "manager":
       return "secondary";
     default:
       return "outline";

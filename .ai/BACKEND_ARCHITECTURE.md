@@ -327,21 +327,16 @@ CREATE TABLE orgs (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Users
+-- Users with role and org_id
+-- Roles: admin, manager, member (org-scoped) | support, super_admin (global)
+-- org_id is NULL for global roles (support, super_admin)
 CREATE TABLE users (
   user_id      TEXT PRIMARY KEY,
   email        TEXT UNIQUE,
   display_name TEXT,
+  org_id       TEXT REFERENCES orgs(org_id),
+  role         TEXT NOT NULL DEFAULT 'member',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Org membership
-CREATE TABLE org_members (
-  org_id     TEXT NOT NULL REFERENCES orgs(org_id),
-  user_id    TEXT NOT NULL REFERENCES users(user_id),
-  role       TEXT NOT NULL, -- "admin" | "member" | "viewer"
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (org_id, user_id)
 );
 ```
 

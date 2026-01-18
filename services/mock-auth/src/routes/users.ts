@@ -1,10 +1,11 @@
 /**
  * Users route - lists users available for dev authentication.
+ * Uses the simplified users table with role and org_id columns.
  */
 
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
-import { users, orgMembers, orgs, platformUsers } from "@repo/shared/db/schema";
+import { users, orgs } from "@repo/shared/db/schema";
 import type { UserRole } from "@repo/shared/types";
 
 interface UserWithOrg {
@@ -17,44 +18,15 @@ interface UserWithOrg {
   role: UserRole;
 }
 
-// Map database org_members roles to UserRole enum
-function mapDbRoleToUserRole(dbRole: string | null): UserRole {
-  switch (dbRole?.toLowerCase()) {
-    case "admin":
-      return "ORG_ADMIN";
-    case "member":
-      return "MEMBER";
-    case "viewer":
-      return "MEMBER"; // Viewers are treated as members for now
-    case "manager":
-      return "MANAGER";
-    default:
-      return "MEMBER";
-  }
-}
-
 export async function usersRoute(fastify: FastifyInstance) {
   /**
-   * GET /users - List all users with their org memberships
+   * GET /users - List all users with their org info
    */
   fastify.get("/users", async () => {
     const db = (fastify as unknown as { db: ReturnType<typeof import("@repo/shared/db/client").getDb> }).db;
 
-    // Get all users
+    // Get all users (role and org_id are now directly on users table)
     const allUsers = await db.select().from(users);
-
-    // Get all org memberships
-    const memberships = await db
-      .select({
-        userId: orgMembers.user_id,
-        orgId: orgMembers.org_id,
-        role: orgMembers.role,
-      })
-      .from(orgMembers);
-
-    // Get all platform users (SUPPORT, SUPER_ADMIN)
-    const platformUsersList = await db.select().from(platformUsers);
-    const platformUserMap = new Map(platformUsersList.map((p) => [p.user_id, p.role as UserRole]));
 
     // Get all orgs for name lookup
     const allOrgs = await db.select().from(orgs);
@@ -62,36 +34,16 @@ export async function usersRoute(fastify: FastifyInstance) {
 
     // Build user list with org info
     const usersWithOrgs: UserWithOrg[] = allUsers.map((user) => {
-      // Check if this is a platform-level user first
-      const platformRole = platformUserMap.get(user.user_id);
-
-      if (platformRole) {
-        // Platform users don't have org memberships
-        return {
-          userId: user.user_id,
-          email: user.email,
-          displayName: user.display_name,
-          createdAt: user.created_at,
-          orgId: null,
-          orgName: null,
-          role: platformRole,
-        };
-      }
-
-      // Regular org user
-      const membership = memberships.find((m) => m.userId === user.user_id);
-      const orgId = membership?.orgId || null;
-      const orgName = orgId ? (orgMap.get(orgId) || null) : null;
-      const role = mapDbRoleToUserRole(membership?.role || null);
+      const orgName = user.org_id ? (orgMap.get(user.org_id) || null) : null;
 
       return {
         userId: user.user_id,
         email: user.email,
         displayName: user.display_name,
         createdAt: user.created_at,
-        orgId,
+        orgId: user.org_id,
         orgName,
-        role,
+        role: user.role as UserRole,
       };
     });
 
@@ -113,35 +65,10 @@ export async function usersRoute(fastify: FastifyInstance) {
       return;
     }
 
-    // Check if this is a platform-level user
-    const [platformUser] = await db.select().from(platformUsers).where(eq(platformUsers.user_id, userId));
-
-    if (platformUser) {
-      // Platform users don't have org memberships
-      return {
-        userId: user.user_id,
-        email: user.email,
-        displayName: user.display_name,
-        createdAt: user.created_at,
-        orgId: null,
-        orgName: null,
-        role: platformUser.role as UserRole,
-      };
-    }
-
-    // Get org membership for regular users
-    const [membership] = await db
-      .select({
-        orgId: orgMembers.org_id,
-        role: orgMembers.role,
-      })
-      .from(orgMembers)
-      .where(eq(orgMembers.user_id, userId));
-
-    // Get org name
+    // Get org name if user has an org
     let orgName: string | null = null;
-    if (membership?.orgId) {
-      const [org] = await db.select().from(orgs).where(eq(orgs.org_id, membership.orgId));
+    if (user.org_id) {
+      const [org] = await db.select().from(orgs).where(eq(orgs.org_id, user.org_id));
       orgName = org?.name || null;
     }
 
@@ -150,9 +77,9 @@ export async function usersRoute(fastify: FastifyInstance) {
       email: user.email,
       displayName: user.display_name,
       createdAt: user.created_at,
-      orgId: membership?.orgId || null,
+      orgId: user.org_id,
       orgName,
-      role: mapDbRoleToUserRole(membership?.role || null),
+      role: user.role as UserRole,
     };
   });
 

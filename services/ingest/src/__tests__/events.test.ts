@@ -331,7 +331,7 @@ describe("POST /events", () => {
         },
       });
 
-      const body: IngestResponse = response.json();
+      response.json();
       expect(response.statusCode).toBe(400);
     });
 
@@ -361,7 +361,7 @@ describe("POST /events", () => {
         },
       });
 
-      const body: IngestResponse = response.json();
+      response.json();
       expect(response.statusCode).toBe(400);
     });
 
@@ -391,7 +391,7 @@ describe("POST /events", () => {
         },
       });
 
-      const body: IngestResponse = response.json();
+      response.json();
       expect(response.statusCode).toBe(400);
     });
 
@@ -415,7 +415,7 @@ describe("POST /events", () => {
         },
       });
 
-      const body: IngestResponse = response.json();
+      response.json();
       expect(response.statusCode).toBe(400);
     });
   });

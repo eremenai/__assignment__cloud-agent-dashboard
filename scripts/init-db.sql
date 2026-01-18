@@ -12,27 +12,19 @@ CREATE TABLE IF NOT EXISTS orgs (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Users table with role and org_id
+-- Roles: admin, manager, member (org-scoped) | support, super_admin (global)
+-- org_id is NULL for global roles (support, super_admin)
 CREATE TABLE IF NOT EXISTS users (
   user_id      TEXT PRIMARY KEY,
   email        TEXT UNIQUE,
   display_name TEXT,
+  org_id       TEXT REFERENCES orgs(org_id),
+  role         TEXT NOT NULL DEFAULT 'member',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS org_members (
-  org_id     TEXT NOT NULL REFERENCES orgs(org_id),
-  user_id    TEXT NOT NULL REFERENCES users(user_id),
-  role       TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (org_id, user_id)
-);
-
--- Platform-level users (SUPPORT, SUPER_ADMIN) who operate across organizations
-CREATE TABLE IF NOT EXISTS platform_users (
-  user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
-  role       TEXT NOT NULL CHECK (role IN ('SUPPORT', 'SUPER_ADMIN')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+CREATE INDEX IF NOT EXISTS users_org_id_idx ON users(org_id);
 
 -- ============================================================================
 -- Event Store

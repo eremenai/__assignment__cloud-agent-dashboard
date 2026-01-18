@@ -17,8 +17,6 @@ import {
   type OrgDailyTrend,
 } from "../db/queries";
 
-const USE_REAL_DB = process.env.USE_REAL_DB === "true";
-
 /**
  * Get org metrics (KPIs) for a date range.
  */
@@ -26,12 +24,6 @@ export async function fetchOrgMetrics(
   orgId: string,
   timeRange: TimeRangeParams
 ): Promise<OrgMetricsResponse> {
-  if (!USE_REAL_DB) {
-    // Defer to mock API (dynamic import to avoid bundling in prod)
-    const { getOrgMetrics } = await import("@/dev/mock-api");
-    return getOrgMetrics(orgId, timeRange);
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 
@@ -50,11 +42,6 @@ export async function fetchOrgTrends(
   orgId: string,
   timeRange: TimeRangeParams
 ): Promise<OrgTrendsResponse> {
-  if (!USE_REAL_DB) {
-    const { getOrgTrends } = await import("@/dev/mock-api");
-    return getOrgTrends(orgId, timeRange);
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 
@@ -70,11 +57,6 @@ export async function fetchOrgFailures(
   orgId: string,
   timeRange: TimeRangeParams
 ): Promise<{ categories: FailureCategoryCount[]; totalFailures: number }> {
-  if (!USE_REAL_DB) {
-    const { getOrgFailures } = await import("@/dev/mock-api");
-    return getOrgFailures(orgId, timeRange);
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 

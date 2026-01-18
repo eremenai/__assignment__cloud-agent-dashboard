@@ -19,8 +19,6 @@ import {
   type SessionDetail,
 } from "../db/queries";
 
-const USE_REAL_DB = process.env.USE_REAL_DB === "true";
-
 /**
  * Get paginated sessions list.
  */
@@ -28,18 +26,8 @@ export async function fetchSessionsList(
   orgId: string,
   timeRange: TimeRangeParams,
   pagination: PaginationParams,
-  sort: SortParams
+  _sort: SortParams
 ): Promise<SessionsListResponse> {
-  if (!USE_REAL_DB) {
-    const { getSessionsList } = await import("@/dev/mock-api");
-    return getSessionsList(
-      orgId,
-      timeRange,
-      pagination,
-      sort
-    );
-  }
-
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
   const offset = (pagination.page - 1) * pagination.pageSize;
@@ -86,11 +74,6 @@ export async function fetchSessionDetail(
   orgId: string,
   sessionId: string
 ): Promise<SessionDetailResponse | null> {
-  if (!USE_REAL_DB) {
-    const { getSessionDetail } = await import("@/dev/mock-api");
-    return getSessionDetail(sessionId);
-  }
-
   const detail = await getSessionDetailFromDb(orgId, sessionId);
 
   if (!detail) {

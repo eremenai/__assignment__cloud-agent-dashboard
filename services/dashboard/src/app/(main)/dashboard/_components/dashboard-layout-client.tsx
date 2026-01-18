@@ -9,17 +9,20 @@ import type { ReactNode } from "react";
 
 import { BreadcrumbsProvider, OrgSelector, TimeRangeSelector } from "@/components/layout";
 import { AuthProvider } from "@/lib/auth";
+import type { AuthUser } from "@/lib/types/auth";
 
 import { HeaderUser } from "./header-user";
 import { ThemeSwitcher } from "./sidebar/theme-switcher";
 
 interface DashboardLayoutClientProps {
   children: ReactNode;
+  /** User parsed from JWT on the server */
+  initialUser: AuthUser | null;
 }
 
-export function DashboardLayoutClient({ children }: DashboardLayoutClientProps) {
+export function DashboardLayoutClient({ children, initialUser }: DashboardLayoutClientProps) {
   return (
-    <AuthProvider>
+    <AuthProvider initialUser={initialUser}>
       <BreadcrumbsProvider>{children}</BreadcrumbsProvider>
     </AuthProvider>
   );

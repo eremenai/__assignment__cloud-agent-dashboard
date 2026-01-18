@@ -24,7 +24,9 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
+import type { NavGroup } from "./app-sidebar";
+
+type NavMainItem = NavGroup["items"][number];
 
 interface NavMainProps {
   readonly items: readonly NavGroup[];
