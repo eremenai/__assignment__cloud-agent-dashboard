@@ -7,43 +7,62 @@ import "@testing-library/jest-dom/vitest";
 
 // Mock window.matchMedia for components that use media queries
 Object.defineProperty(window, "matchMedia", {
-	writable: true,
-	value: (query: string) => ({
-		matches: false,
-		media: query,
-		onchange: null,
-		addListener: () => {},
-		removeListener: () => {},
-		addEventListener: () => {},
-		removeEventListener: () => {},
-		dispatchEvent: () => false,
-	}),
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {
+      // no-op for test mock
+    },
+    removeListener: () => {
+      // no-op for test mock
+    },
+    addEventListener: () => {
+      // no-op for test mock
+    },
+    removeEventListener: () => {
+      // no-op for test mock
+    },
+    dispatchEvent: () => false,
+  }),
 });
 
 // Mock ResizeObserver
 class ResizeObserverMock {
-	observe() {}
-	unobserve() {}
-	disconnect() {}
+  observe() {
+    // no-op for test mock
+  }
+  unobserve() {
+    // no-op for test mock
+  }
+  disconnect() {
+    // no-op for test mock
+  }
 }
 
 window.ResizeObserver = ResizeObserverMock;
 
 // Mock IntersectionObserver
 class IntersectionObserverMock {
-	root = null;
-	rootMargin = "";
-	thresholds = [];
-	observe() {}
-	unobserve() {}
-	disconnect() {}
-	takeRecords() {
-		return [];
-	}
+  root = null;
+  rootMargin = "";
+  thresholds = [];
+  observe() {
+    // no-op for test mock
+  }
+  unobserve() {
+    // no-op for test mock
+  }
+  disconnect() {
+    // no-op for test mock
+  }
+  takeRecords() {
+    return [];
+  }
 }
 
-window.IntersectionObserver =
-	IntersectionObserverMock as unknown as typeof IntersectionObserver;
+window.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
 
 // Suppress console errors during tests (optional, can be removed)
 // const originalError = console.error;

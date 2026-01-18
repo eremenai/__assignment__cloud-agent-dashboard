@@ -160,6 +160,8 @@ export interface SessionWithMetrics extends Session {
 	hasPostHandoffIteration: boolean;
 	successRate: number;
 	totalCostCents: number;
+	inputTokens: number;
+	outputTokens: number;
 	totalTokens: number;
 }
 
@@ -176,6 +178,7 @@ export interface UserWithMetrics extends User {
 	postHandoffIterationRate: number;
 	successRate: number;
 	totalCostCents: number;
+	totalTokens: number;
 	costPerRun: number;
 }
 

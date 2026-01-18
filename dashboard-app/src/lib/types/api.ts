@@ -85,6 +85,7 @@ export interface OrgTrendsResponse {
 	tokens: TimeSeriesPoint[];
 	friction: MultiSeriesPoint[]; // avgRunsPerSession, handoffRate, postHandoffRate
 	reliability: TimeSeriesPoint[]; // successRate over time
+	reliabilityBreakdown: MultiSeriesPoint[]; // errors, timeouts, cancels per date
 }
 
 export interface OrgFailuresResponse {

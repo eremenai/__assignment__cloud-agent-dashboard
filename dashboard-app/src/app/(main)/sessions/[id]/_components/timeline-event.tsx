@@ -4,142 +4,181 @@
  * Timeline event component for displaying individual events.
  */
 
-import { Play, CheckCircle, XCircle, Clock, XOctagon, MessageSquare, Bot, ArrowUpRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
+import { ArrowUpRight, Bot, CheckCircle, Clock, MessageSquare, Play, XCircle, XOctagon } from "lucide-react";
+
+import { formatCurrency, formatDuration, formatNumber } from "@/lib/format";
+import type { Event, LocalHandoffEvent, Run } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
-import type { Event, Run, LocalHandoffEvent } from "@/lib/types/domain";
-import { formatDuration, formatCurrency } from "@/lib/format";
 
 interface TimelineEventProps {
-	event: Event;
-	runs: Run[];
-	handoffs: LocalHandoffEvent[];
+  event: Event;
+  runs: Run[];
+  handoffs: LocalHandoffEvent[];
+  isHighlighted?: boolean;
+  onHighlightComplete?: () => void;
+  isLast?: boolean;
 }
 
 function formatTime(date: Date): string {
-	return date.toLocaleTimeString("en-US", {
-		hour: "numeric",
-		minute: "2-digit",
-	});
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function RunEndDetails({ run }: { run: Run }) {
-	return (
-		<div className="mt-1 text-sm text-muted-foreground">
-			<span>Duration: {formatDuration(run.executionMs)}</span>
-			<span className="mx-2">|</span>
-			<span>Cost: {formatCurrency(run.costCents / 100)}</span>
-			<span className="mx-2">|</span>
-			<span>{run.totalTokens.toLocaleString()} tokens</span>
-			{run.failureCategory && (
-				<>
-					<span className="mx-2">|</span>
-					<span className="text-red-600">Error: {run.failureCategory}</span>
-				</>
-			)}
-		</div>
-	);
+  return (
+    <div className="mt-2 space-y-1 rounded-md bg-muted/50 p-3 text-sm">
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <span>
+          <span className="text-muted-foreground">Duration:</span> {formatDuration(run.executionMs)}
+        </span>
+        <span>
+          <span className="text-muted-foreground">Cost:</span> {formatCurrency(run.costCents / 100)}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <span>
+          <span className="text-muted-foreground">Tokens:</span> {formatNumber(run.totalTokens)}
+        </span>
+        <span className="text-muted-foreground">
+          ({formatNumber(run.inputTokens)} in / {formatNumber(run.outputTokens)} out)
+        </span>
+      </div>
+      {run.failureCategory && (
+        <div className="text-red-600">
+          <span className="text-muted-foreground">Error:</span> {run.failureCategory}
+        </div>
+      )}
+    </div>
+  );
 }
 
-export function TimelineEvent({ event, runs, handoffs }: TimelineEventProps) {
-	const timestamp = new Date(event.timestamp);
+export function TimelineEvent({
+  event,
+  runs,
+  handoffs,
+  isHighlighted,
+  onHighlightComplete,
+  isLast,
+}: TimelineEventProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [showHighlight, setShowHighlight] = useState(false);
+  const timestamp = new Date(event.timestamp);
 
-	// Determine event type and content
-	let icon: React.ReactNode;
-	let title: string;
-	let details: React.ReactNode = null;
-	let iconColor = "text-gray-400";
+  // Handle highlight animation
+  useEffect(() => {
+    if (isHighlighted && ref.current) {
+      // Scroll into view
+      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Show highlight
+      setShowHighlight(true);
+      // Fade out after a delay
+      const timer = setTimeout(() => {
+        setShowHighlight(false);
+        onHighlightComplete?.();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isHighlighted, onHighlightComplete]);
 
-	const payload = event.payload;
+  // Determine event type and content
+  let icon: React.ReactNode;
+  let title: string;
+  let details: React.ReactNode = null;
+  let iconColor = "text-gray-400";
+  let eventId: string | undefined;
 
-	switch (payload.type) {
-		case "MESSAGE":
-			if (event.actorType === "USER") {
-				icon = <MessageSquare className="h-4 w-4" />;
-				iconColor = "text-blue-500";
-				title = "User message";
-			} else {
-				icon = <Bot className="h-4 w-4" />;
-				iconColor = "text-purple-500";
-				title = "Agent response";
-			}
-			details = (
-				<p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-					{payload.preview || payload.content}
-				</p>
-			);
-			break;
+  const payload = event.payload;
 
-		case "RUN_START":
-			icon = <Play className="h-4 w-4" />;
-			iconColor = "text-gray-400";
-			title = `Run #${payload.runNumber} started`;
-			break;
+  switch (payload.type) {
+    case "MESSAGE":
+      if (event.actorType === "USER") {
+        icon = <MessageSquare className="h-4 w-4" />;
+        iconColor = "text-blue-500";
+        title = "User message";
+      } else {
+        icon = <Bot className="h-4 w-4" />;
+        iconColor = "text-purple-500";
+        title = "Agent response";
+      }
+      details = <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">{payload.preview || payload.content}</p>;
+      break;
 
-		case "RUN_END": {
-			const run = runs.find((r) => r.runId === payload.runId);
-			const status = payload.status;
+    case "RUN_START":
+      icon = <Play className="h-4 w-4" />;
+      iconColor = "text-gray-400";
+      title = `Run #${payload.runNumber} started`;
+      break;
 
-			if (status === "SUCCEEDED") {
-				icon = <CheckCircle className="h-4 w-4" />;
-				iconColor = "text-green-500";
-				title = `Run #${payload.runNumber} completed (Success)`;
-			} else if (status === "FAILED") {
-				icon = <XCircle className="h-4 w-4" />;
-				iconColor = "text-red-500";
-				title = `Run #${payload.runNumber} failed`;
-			} else if (status === "TIMEOUT") {
-				icon = <Clock className="h-4 w-4" />;
-				iconColor = "text-amber-500";
-				title = `Run #${payload.runNumber} timed out`;
-			} else {
-				icon = <XOctagon className="h-4 w-4" />;
-				iconColor = "text-gray-500";
-				title = `Run #${payload.runNumber} canceled`;
-			}
+    case "RUN_END": {
+      const run = runs.find((r) => r.runId === payload.runId);
+      const status = payload.status;
+      eventId = `event-run-${payload.runId}`;
 
-			if (run) {
-				details = <RunEndDetails run={run} />;
-			}
-			break;
-		}
+      if (status === "SUCCEEDED") {
+        icon = <CheckCircle className="h-4 w-4" />;
+        iconColor = "text-green-500";
+        title = `Run #${payload.runNumber} completed (Success)`;
+      } else if (status === "FAILED") {
+        icon = <XCircle className="h-4 w-4" />;
+        iconColor = "text-red-500";
+        title = `Run #${payload.runNumber} failed`;
+      } else if (status === "TIMEOUT") {
+        icon = <Clock className="h-4 w-4" />;
+        iconColor = "text-amber-500";
+        title = `Run #${payload.runNumber} timed out`;
+      } else {
+        icon = <XOctagon className="h-4 w-4" />;
+        iconColor = "text-gray-500";
+        title = `Run #${payload.runNumber} canceled`;
+      }
 
-		case "HANDOFF": {
-			icon = <ArrowUpRight className="h-4 w-4" />;
-			iconColor = "text-teal-500";
-			title = `Local handoff (${payload.method})`;
-			const handoff = handoffs.find((h) => h.handoffId === payload.handoffId);
-			if (handoff) {
-				details = (
-					<p className="mt-1 text-sm text-muted-foreground">
-						User: {handoff.userId}
-					</p>
-				);
-			}
-			break;
-		}
-	}
+      if (run) {
+        details = <RunEndDetails run={run} />;
+      }
+      break;
+    }
 
-	return (
-		<div className="flex gap-4 pb-6 last:pb-0">
-			{/* Timeline connector */}
-			<div className="flex flex-col items-center">
-				<div className={cn("rounded-full p-1.5 bg-background border", iconColor)}>
-					{icon}
-				</div>
-				<div className="flex-1 w-px bg-border mt-2" />
-			</div>
+    case "HANDOFF": {
+      icon = <ArrowUpRight className="h-4 w-4" />;
+      iconColor = "text-teal-500";
+      title = `Local handoff (${payload.method})`;
+      eventId = `event-handoff-${payload.handoffId}`;
+      const handoff = handoffs.find((h) => h.handoffId === payload.handoffId);
+      if (handoff) {
+        details = <p className="mt-1 text-muted-foreground text-sm">User: {handoff.userId}</p>;
+      }
+      break;
+    }
+  }
 
-			{/* Event content */}
-			<div className="flex-1 pb-2">
-				<div className="flex items-center gap-2">
-					<span className="text-sm text-muted-foreground">
-						{formatTime(timestamp)}
-					</span>
-					<span className="font-medium">{title}</span>
-				</div>
-				{details}
-			</div>
-		</div>
-	);
+  return (
+    <div
+      ref={ref}
+      id={eventId}
+      className={cn(
+        "-mx-2 flex gap-4 rounded-lg px-2 transition-all duration-500",
+        isLast ? "pb-0" : "pb-6",
+        showHighlight && "bg-primary/10",
+      )}
+    >
+      {/* Timeline connector */}
+      <div className="flex flex-col items-center">
+        <div className={cn("rounded-full border bg-background p-1.5", iconColor)}>{icon}</div>
+        {!isLast && <div className="mt-2 w-px flex-1 bg-border" />}
+      </div>
+
+      {/* Event content */}
+      <div className="flex-1 pb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-sm">{formatTime(timestamp)}</span>
+          <span className="font-medium">{title}</span>
+        </div>
+        {details}
+      </div>
+    </div>
+  );
 }

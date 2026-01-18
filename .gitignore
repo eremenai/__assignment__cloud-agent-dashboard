@@ -69,3 +69,6 @@ Desktop.ini
 *.seed
 *.pid.lock
 .cache/
+
+.playwright-mcp
+.claude/settings.local.json

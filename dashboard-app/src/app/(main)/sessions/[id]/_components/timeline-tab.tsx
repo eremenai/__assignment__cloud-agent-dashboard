@@ -4,41 +4,49 @@
  * Timeline tab showing chronological event list.
  */
 
-import type { Event, Run, LocalHandoffEvent } from "@/lib/types/domain";
 import { EmptyState } from "@/components/analytics";
+import type { Event, LocalHandoffEvent, Run } from "@/lib/types/domain";
+
 import { TimelineEvent } from "./timeline-event";
 
 interface TimelineTabProps {
-	events: Event[];
-	runs: Run[];
-	handoffs: LocalHandoffEvent[];
+  events: Event[];
+  runs: Run[];
+  handoffs: LocalHandoffEvent[];
+  highlightedRunId?: string | null;
+  onHighlightComplete?: () => void;
 }
 
-export function TimelineTab({ events, runs, handoffs }: TimelineTabProps) {
-	if (events.length === 0) {
-		return (
-			<EmptyState
-				title="No events yet"
-				description="Session started but no activity has been recorded."
-			/>
-		);
-	}
+export function TimelineTab({ events, runs, handoffs, highlightedRunId, onHighlightComplete }: TimelineTabProps) {
+  if (events.length === 0) {
+    return <EmptyState title="No events yet" description="Session started but no activity has been recorded." />;
+  }
 
-	// Sort events by timestamp
-	const sortedEvents = [...events].sort(
-		(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-	);
+  // Sort events by timestamp
+  const sortedEvents = [...events].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-	return (
-		<div className="py-4">
-			{sortedEvents.map((event) => (
-				<TimelineEvent
-					key={event.eventId}
-					event={event}
-					runs={runs}
-					handoffs={handoffs}
-				/>
-			))}
-		</div>
-	);
+  // Find the event that matches the highlighted run (RUN_END event)
+  const getIsHighlighted = (event: Event): boolean => {
+    if (!highlightedRunId) return false;
+    if (event.payload.type === "RUN_END" && event.payload.runId === highlightedRunId) {
+      return true;
+    }
+    return false;
+  };
+
+  return (
+    <div className="py-4">
+      {sortedEvents.map((event, index) => (
+        <TimelineEvent
+          key={event.eventId}
+          event={event}
+          runs={runs}
+          handoffs={handoffs}
+          isHighlighted={getIsHighlighted(event)}
+          onHighlightComplete={onHighlightComplete}
+          isLast={index === sortedEvents.length - 1}
+        />
+      ))}
+    </div>
+  );
 }

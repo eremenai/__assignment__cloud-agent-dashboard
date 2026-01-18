@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
+
+import Link from "next/link";
 
 import { Activity } from "lucide-react";
 
+import { DevAuthSwitcher } from "@/components/auth/dev-auth-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -19,7 +21,6 @@ import { useAuth } from "@/lib/auth";
 import { filterNavItems, sidebarItems } from "@/navigation/sidebar/sidebar-items";
 
 import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
@@ -47,7 +48,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={filteredItems} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <DevAuthSwitcher variant="sidebar" />
       </SidebarFooter>
     </Sidebar>
   );

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 interface GlobalLayoutProps {
-	children: ReactNode;
+  children: ReactNode;
 }
 
 export default function GlobalLayout({ children }: GlobalLayoutProps) {
-	return <>{children}</>;
+  return <>{children}</>;
 }

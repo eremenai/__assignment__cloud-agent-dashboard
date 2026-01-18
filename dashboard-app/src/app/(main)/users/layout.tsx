@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 interface UsersLayoutProps {
-	children: ReactNode;
+  children: ReactNode;
 }
 
 export default function UsersLayout({ children }: UsersLayoutProps) {
-	return <>{children}</>;
+  return <>{children}</>;
 }

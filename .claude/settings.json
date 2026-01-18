@@ -1,13 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(pnpm install)",
-      "Bash(pnpm check:*)",
-      "Bash(pnpm build:*)",
-      "Bash(pnpm tsc:*)",
-      "Bash(pnpm test*)"
-    ]
-  },
   "enabledPlugins": {
     "commit-commands@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,

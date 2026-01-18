@@ -95,6 +95,17 @@ export function formatDate(date: Date): string {
 }
 
 /**
+ * Format a time for display (e.g., "2:34 PM").
+ */
+export function formatTime(date: Date): string {
+	return date.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true,
+	});
+}
+
+/**
  * Format a date for chart axis display.
  */
 export function formatChartDate(date: string | Date): string {
@@ -118,4 +129,19 @@ export function truncate(str: string, length: number): string {
  */
 export function formatSessionId(id: string): string {
 	return `#${id.slice(0, 8)}`;
+}
+
+/**
+ * Format a date range for display (e.g., "Dec 1 - Dec 7").
+ */
+export function formatDateRange(from: Date, to: Date): string {
+	const fromStr = from.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+	});
+	const toStr = to.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+	});
+	return `${fromStr} - ${toStr}`;
 }

@@ -61,12 +61,32 @@ function generateOrgData(orgId: string): GeneratedSessionData[] {
 		}
 
 		const runs = generateRuns({ session, runCount });
-		const events = generateEvents({ session, runs });
+		const baseEvents = generateEvents({ session, runs });
 		const handoffs = generateHandoffs({
 			session,
 			runs,
 			probability: 0.35, // 35% of sessions have handoffs
 		});
+
+		// Add handoff events to the events list
+		const handoffEvents: Event[] = handoffs.map((handoff) => ({
+			eventId: `evt-${handoff.handoffId}`,
+			sessionId: session.sessionId,
+			timestamp: handoff.timestamp,
+			type: "HANDOFF" as const,
+			actorType: "USER" as const,
+			payload: {
+				type: "HANDOFF" as const,
+				handoffId: handoff.handoffId,
+				method: handoff.method,
+				userId: handoff.userId,
+			},
+		}));
+
+		// Merge and sort all events by timestamp
+		const events = [...baseEvents, ...handoffEvents].sort(
+			(a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+		);
 
 		return { session, runs, events, handoffs };
 	});

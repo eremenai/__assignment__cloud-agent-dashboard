@@ -4,9 +4,7 @@
  */
 
 import type {
-	FrictionKPIs,
 	OrgWithMetrics,
-	PlatformKPIs,
 	Run,
 	Session,
 	SessionWithMetrics,
@@ -32,7 +30,6 @@ import type {
 } from "@/lib/types/api";
 import {
 	getAllOrganizations,
-	getOrganization,
 } from "./mock-data/organizations";
 import { getUsersForOrg, getUser, getAllUsers } from "./mock-data/users";
 import {
@@ -105,6 +102,8 @@ function computeSessionMetrics(
 	).length;
 	const failedRuns = sessionRuns.filter((r) => r.status !== "SUCCEEDED").length;
 	const totalCostCents = sessionRuns.reduce((sum, r) => sum + r.costCents, 0);
+	const inputTokens = sessionRuns.reduce((sum, r) => sum + r.inputTokens, 0);
+	const outputTokens = sessionRuns.reduce((sum, r) => sum + r.outputTokens, 0);
 	const totalTokens = sessionRuns.reduce((sum, r) => sum + r.totalTokens, 0);
 
 	// Check for post-handoff iteration
@@ -135,6 +134,8 @@ function computeSessionMetrics(
 		successRate:
 			sessionRuns.length > 0 ? (successfulRuns / sessionRuns.length) * 100 : 0,
 		totalCostCents,
+		inputTokens,
+		outputTokens,
 		totalTokens,
 	};
 }
@@ -183,6 +184,7 @@ function computeUserMetrics(
 	const successRate = runCount > 0 ? (successfulRuns / runCount) * 100 : 0;
 
 	const totalCostCents = userRuns.reduce((sum, r) => sum + r.costCents, 0);
+	const totalTokens = userRuns.reduce((sum, r) => sum + r.totalTokens, 0);
 	const costPerRun = runCount > 0 ? totalCostCents / runCount : 0;
 
 	return {
@@ -195,6 +197,7 @@ function computeUserMetrics(
 		postHandoffIterationRate: Math.round(postHandoffIterationRate * 10) / 10,
 		successRate: Math.round(successRate * 10) / 10,
 		totalCostCents,
+		totalTokens,
 		costPerRun: Math.round(costPerRun),
 	};
 }
@@ -410,6 +413,24 @@ export function getOrgTrends(
 			baseValue: 92,
 			variance: 0.05,
 			trend: 0.01,
+		}),
+		reliabilityBreakdown: generateTimeSeries({
+			startDate: from,
+			endDate: to,
+			baseValue: avgDailyRuns * 0.08, // ~8% failure rate
+			variance: 0.4,
+		}).map((p) => {
+			// Distribute failures across categories
+			const totalFailures = Math.max(0, Math.round(p.value));
+			const errors = Math.round(totalFailures * 0.4);
+			const timeouts = Math.round(totalFailures * 0.35);
+			const cancels = totalFailures - errors - timeouts;
+			return {
+				date: p.date,
+				errors,
+				timeouts,
+				cancels,
+			};
 		}),
 	};
 }
@@ -798,7 +819,7 @@ export function getUserSessions(
 // Global APIs (SUPER_ADMIN)
 // ============================================================================
 
-export function getGlobalMetrics(timeRange: TimeRangeParams): GlobalMetricsResponse {
+export function getGlobalMetrics(_timeRange: TimeRangeParams): GlobalMetricsResponse {
 	const orgs = getAllOrganizations();
 	let totalRuns = 0;
 	let totalSuccess = 0;
@@ -832,7 +853,7 @@ export function getGlobalMetrics(timeRange: TimeRangeParams): GlobalMetricsRespo
 }
 
 export function getGlobalOrgs(
-	pagination: PaginationParams,
+	_pagination: PaginationParams,
 	sort: SortParams,
 ): GlobalOrgsResponse {
 	const orgs = getAllOrganizations();
