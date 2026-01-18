@@ -25,10 +25,21 @@ function DragHandle({ id }: { id: number }) {
   );
 }
 
-export const dragColumn: ColumnDef<any> = {
-  id: "drag",
-  header: () => null,
-  cell: ({ row }) => <DragHandle id={row.original.id} />,
-  enableSorting: false,
-  enableHiding: false,
-};
+/**
+ * Creates a drag column definition for tables with row reordering.
+ * Generic type parameter ensures type safety with row data.
+ */
+export function createDragColumn<T extends { id: number }>(): ColumnDef<T> {
+  return {
+    id: "drag",
+    header: () => null,
+    cell: ({ row }) => <DragHandle id={row.original.id} />,
+    enableSorting: false,
+    enableHiding: false,
+  };
+}
+
+/**
+ * @deprecated Use createDragColumn<T>() for type-safe column definition
+ */
+export const dragColumn: ColumnDef<{ id: number }> = createDragColumn();

@@ -31,7 +31,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!.github", "!.husky", "!node_modules", "!.next", "!dist", "!out", "!src/components/ui"]
+    "includes": ["**", "!.github", "!.husky", "!node_modules", "!.next", "!dist", "!out", "!src/components/ui", "!playwright-report", "!test-results", "!coverage"]
   },
   "formatter": {
     "enabled": true,
@@ -77,6 +77,10 @@
       },
       "complexity": {
         "noImportantStyles": "off"
+      },
+      "a11y": {
+        "useValidAriaRole": "warn",
+        "noStaticElementInteractions": "warn"
       }
     },
     "domains": {

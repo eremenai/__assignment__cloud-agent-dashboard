@@ -87,7 +87,9 @@ export default function UsersPage() {
           title="Access denied"
           description="You don't have permission to view users."
           actionLabel="Back to Dashboard"
-          onAction={() => (window.location.href = "/dashboard")}
+          onAction={() => {
+            window.location.href = "/dashboard";
+          }}
         />
       </div>
     );

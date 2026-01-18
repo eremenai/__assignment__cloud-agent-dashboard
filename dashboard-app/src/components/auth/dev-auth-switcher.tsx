@@ -31,7 +31,8 @@ interface DevAuthSwitcherProps {
 
 export function DevAuthSwitcher({ variant = "default" }: DevAuthSwitcherProps) {
   const { user, switchUser } = useAuth();
-  const sidebar = variant === "sidebar" ? useSidebar() : null;
+  const sidebarContext = useSidebar();
+  const sidebar = variant === "sidebar" ? sidebarContext : null;
   const pathname = usePathname();
   const router = useRouter();
 

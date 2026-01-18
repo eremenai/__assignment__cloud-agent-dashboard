@@ -234,7 +234,10 @@ export function SessionTimelineBar({
               {segments.map((segment, _index) => (
                 <Tooltip key={segment.id}>
                   <TooltipTrigger asChild>
+                    {/* biome-ignore lint/a11y/noStaticElementInteractions: role="button" is conditionally applied when interactive */}
                     <div
+                      role={segment.clickTarget ? "button" : undefined}
+                      tabIndex={segment.clickTarget ? 0 : undefined}
                       className={cn(
                         "absolute top-0 h-full transition-all hover:shadow-sm hover:brightness-110",
                         segment.clickTarget && "cursor-pointer",
@@ -247,7 +250,17 @@ export function SessionTimelineBar({
                         left: `${segment.startPercent}%`,
                         width: `${Math.max(segment.widthPercent, 0.5)}%`,
                       }}
-                      onClick={() => handleSegmentClick(segment)}
+                      onClick={segment.clickTarget ? () => handleSegmentClick(segment) : undefined}
+                      onKeyDown={
+                        segment.clickTarget
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleSegmentClick(segment);
+                              }
+                            }
+                          : undefined
+                      }
                     >
                       {/* Run number indicator for larger segments */}
                       {segment.type === "run" && segment.widthPercent > 8 && (

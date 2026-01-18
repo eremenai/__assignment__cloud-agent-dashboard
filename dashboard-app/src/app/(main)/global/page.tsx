@@ -57,7 +57,9 @@ export default function GlobalOverviewPage() {
           title="Access denied"
           description="Only Super Administrators can access the global overview."
           actionLabel="Back to Dashboard"
-          onAction={() => (window.location.href = "/dashboard")}
+          onAction={() => {
+            window.location.href = "/dashboard";
+          }}
         />
       </div>
     );

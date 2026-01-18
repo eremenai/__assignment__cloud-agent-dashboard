@@ -93,7 +93,9 @@ export default function SessionDetailPage({ params }: SessionDetailPageProps) {
           title="Session not found"
           description="The session you're looking for doesn't exist or you don't have access to it."
           actionLabel="Back to Sessions"
-          onAction={() => (window.location.href = "/sessions")}
+          onAction={() => {
+            window.location.href = "/sessions";
+          }}
         />
       </div>
     );
@@ -108,7 +110,9 @@ export default function SessionDetailPage({ params }: SessionDetailPageProps) {
           title="Access denied"
           description="You don't have permission to view this session."
           actionLabel="Back to Sessions"
-          onAction={() => (window.location.href = "/sessions")}
+          onAction={() => {
+            window.location.href = "/sessions";
+          }}
         />
       </div>
     );

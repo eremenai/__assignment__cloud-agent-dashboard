@@ -29,7 +29,7 @@ interface UserDetailPageProps {
 
 export default function UserDetailPage({ params }: UserDetailPageProps) {
   const resolvedParams = use(params);
-  const { user: authUser, canViewUser } = useAuth();
+  const { canViewUser } = useAuth();
   const { from, to } = useTimeRangeParams();
   const { setMetadata, clearMetadata } = useBreadcrumbs();
 
@@ -80,7 +80,9 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           title="User not found"
           description="The user you're looking for doesn't exist or you don't have access to it."
           actionLabel="Back to Users"
-          onAction={() => (window.location.href = "/users")}
+          onAction={() => {
+            window.location.href = "/users";
+          }}
         />
       </div>
     );
@@ -94,7 +96,9 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           title="Access denied"
           description="You don't have permission to view this user."
           actionLabel="Back to Dashboard"
-          onAction={() => (window.location.href = "/dashboard")}
+          onAction={() => {
+            window.location.href = "/dashboard";
+          }}
         />
       </div>
     );

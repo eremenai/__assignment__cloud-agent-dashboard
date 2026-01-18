@@ -24,10 +24,11 @@ export function NavUser({
     readonly avatar?: string;
   } | null;
 }) {
+  const { isMobile } = useSidebar();
+
   if (!user) {
     return null;
   }
-  const { isMobile } = useSidebar();
 
   return (
     <SidebarMenu>
