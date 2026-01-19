@@ -43,7 +43,7 @@ test.describe("Usage Trends Chart Interactions", () => {
 
         // Tooltip should appear
         const tooltip = page.locator('[class*="recharts-tooltip"], [class*="tooltip"]');
-        const hasTooltip = await tooltip.isVisible().catch(() => false);
+        const _hasTooltip = await tooltip.isVisible().catch(() => false);
 
         // Even if tooltip doesn't appear, the test should check for chart interaction
         expect(true).toBeTruthy();
@@ -184,7 +184,7 @@ test.describe("Reliability Chart Interactions", () => {
     const reliabilityCard = page.locator('[class*="card"]').filter({ hasText: "Reliability" });
 
     // Chart should have stacked elements
-    const stackedBars = reliabilityCard.locator('[class*="recharts-bar-rectangle"]');
+    const _stackedBars = reliabilityCard.locator('[class*="recharts-bar-rectangle"]');
     // Even if count is 0 (no errors), the structure should exist
     expect(true).toBeTruthy();
   });
@@ -200,14 +200,14 @@ test.describe("Chart Responsiveness", () => {
     const chartWrapper = page.locator('[class*="recharts-responsive-container"]').first();
     await expect(chartWrapper).toBeVisible();
 
-    const initialBox = await chartWrapper.boundingBox();
+    const _initialBox = await chartWrapper.boundingBox();
 
     // Resize viewport
     await page.setViewportSize({ width: 800, height: 600 });
     await page.waitForTimeout(500);
 
     // Chart should have resized
-    const newBox = await chartWrapper.boundingBox();
+    const _newBox = await chartWrapper.boundingBox();
 
     // Chart should still be visible after resize
     await expect(chartWrapper).toBeVisible();
@@ -270,7 +270,7 @@ test.describe("Chart Data Loading States", () => {
     await page.goto("/dashboard");
 
     // Initially might show loading skeletons
-    const skeletons = page.locator('[class*="skeleton"], [class*="animate-pulse"]');
+    const _skeletons = page.locator('[class*="skeleton"], [class*="animate-pulse"]');
 
     // Either skeletons or content should be visible quickly
     await page.waitForTimeout(500);

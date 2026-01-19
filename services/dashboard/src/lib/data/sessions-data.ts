@@ -222,7 +222,7 @@ function transformSessionDetail(detail: SessionDetail): SessionDetailResponse {
       const msgPayload = e.payload as { content?: string } | undefined;
       const content = msgPayload?.content ?? "";
       // Create a preview (truncated version for timeline display)
-      const preview = content.length > 200 ? content.slice(0, 200) + "..." : content;
+      const preview = content.length > 200 ? `${content.slice(0, 200)}...` : content;
       return {
         ...baseEvent,
         actorType: "user" as const, // Messages in this system are from users

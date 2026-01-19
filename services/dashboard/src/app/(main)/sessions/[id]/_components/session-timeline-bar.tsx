@@ -88,7 +88,7 @@ export function SessionTimelineBar({
       const eventMs = new Date(event.timestamp).getTime() - sessionStartMs;
       const payload = event.payload as { content?: string; preview?: string } | undefined;
       const preview = payload?.preview || payload?.content || "";
-      const truncatedPreview = preview.length > 100 ? preview.slice(0, 100) + "..." : preview;
+      const truncatedPreview = preview.length > 100 ? `${preview.slice(0, 100)}...` : preview;
 
       allMarkers.push({
         id: event.eventId,
@@ -102,7 +102,7 @@ export function SessionTimelineBar({
               <span className="text-muted-foreground">Time:</span> {formatTime(new Date(event.timestamp))}
             </p>
             {truncatedPreview && (
-              <p className="max-w-[200px] text-xs text-muted-foreground line-clamp-3">
+              <p className="line-clamp-3 max-w-[200px] text-muted-foreground text-xs">
                 {truncatedPreview}
               </p>
             )}
@@ -352,7 +352,7 @@ export function SessionTimelineBar({
                       <button
                         type="button"
                         className={cn(
-                          "absolute -translate-x-1/2 h-3 w-3 rounded-full border-2 transition-all hover:scale-125",
+                          "-translate-x-1/2 absolute h-3 w-3 rounded-full border-2 transition-all hover:scale-125",
                           marker.type === "message" && "border-blue-500 bg-blue-400",
                           marker.type === "handoff" && "border-teal-500 bg-teal-400",
                         )}

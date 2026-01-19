@@ -119,7 +119,7 @@ test.describe("Usage Trends Chart Interactions", () => {
     await page.waitForTimeout(500);
 
     // Tooltip should appear (Recharts creates tooltips dynamically)
-    const tooltip = page.locator('[class*="recharts-tooltip"]');
+    const _tooltip = page.locator('[class*="recharts-tooltip"]');
     // Note: tooltip may not always appear depending on data positioning
   });
 });

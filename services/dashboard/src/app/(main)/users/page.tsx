@@ -26,8 +26,8 @@ function UsersContentFallback() {
 
       {/* Summary skeleton */}
       <div className="grid gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={`summary-${i}`}>
+        {(["users", "sessions", "runs", "cost"] as const).map((name) => (
+          <Card key={`summary-${name}`}>
             <CardContent className="p-4">
               <Skeleton className="mb-2 h-4 w-20" />
               <Skeleton className="h-6 w-16" />

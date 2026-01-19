@@ -30,8 +30,8 @@ function SessionsContentFallback() {
 
       {/* Summary skeleton */}
       <div className="grid gap-4 md:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={`summary-${i}`}>
+        {(["runs", "time", "lifespan", "handoff", "iteration"] as const).map((name) => (
+          <Card key={`summary-${name}`}>
             <CardContent className="p-4">
               <Skeleton className="mb-2 h-4 w-20" />
               <Skeleton className="h-6 w-16" />

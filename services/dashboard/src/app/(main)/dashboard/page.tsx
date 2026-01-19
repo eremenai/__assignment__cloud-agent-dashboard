@@ -23,11 +23,13 @@ function KPIsFallback() {
   return <KPISkeleton rows={2} cardsPerRow={5} />;
 }
 
+const CHART_SKELETON_KEYS = ["usage", "cost", "friction", "reliability"] as const;
+
 function ChartsFallback() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={`chart-skeleton-${i}`}>
+      {CHART_SKELETON_KEYS.map((name) => (
+        <Card key={`chart-skeleton-${name}`}>
           <CardHeader>
             <Skeleton className="h-5 w-32" />
           </CardHeader>
@@ -40,11 +42,13 @@ function ChartsFallback() {
   );
 }
 
+const TABLE_SKELETON_KEYS = ["sessions", "users"] as const;
+
 function TablesFallback() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <Card key={`table-skeleton-${i}`}>
+      {TABLE_SKELETON_KEYS.map((name) => (
+        <Card key={`table-skeleton-${name}`}>
           <CardHeader>
             <Skeleton className="h-5 w-32" />
           </CardHeader>

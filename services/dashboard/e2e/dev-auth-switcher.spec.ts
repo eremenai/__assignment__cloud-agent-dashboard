@@ -78,7 +78,7 @@ test.describe("Role-Based UI Changes", () => {
     // Org admin should see org-level data
     // Should NOT see org selector (only Support and Super Admin see it)
     const orgSelector = page.locator('[data-testid="org-selector"], [class*="org-selector"]');
-    const hasOrgSelector = await orgSelector.isVisible().catch(() => false);
+    const _hasOrgSelector = await orgSelector.isVisible().catch(() => false);
 
     // For org-scoped users, there should be no org selector
     // (This depends on the current user's role)
@@ -138,7 +138,7 @@ test.describe("User Switching Flow", () => {
     await page.waitForLoadState("networkidle");
 
     // Record initial state
-    const initialUrl = page.url();
+    const _initialUrl = page.url();
 
     // Try to switch user (if dev auth switcher is available)
     const userButton = page.locator('[data-sidebar="menu-button"]').filter({ hasText: /@/i }).first();
@@ -170,7 +170,7 @@ test.describe("Org Selector (Support/Super Admin)", () => {
     const orgSelector = page.locator(
       '[data-testid="org-selector"], [class*="org-selector"], button:has-text("org_")'
     );
-    const hasOrgSelector = await orgSelector.first().isVisible().catch(() => false);
+    const _hasOrgSelector = await orgSelector.first().isVisible().catch(() => false);
 
     // This test will pass or fail depending on which user is logged in
     // In a full test suite, we would switch to Support user first
