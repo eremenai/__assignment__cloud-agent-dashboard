@@ -1,65 +1,118 @@
 # Cloud Agent Dashboard
 
-## Running the Application
+Org-level analytics dashboard for cloud coding agent execution. Tracks adoption, reliability, speed, cost, and human intervention metrics.
 
-### Option 1: Full Docker (Recommended for Demo/Testing)
+> **Details:** See `.ai/` folder for full documentation. Ask Claude agent to explain any aspect.
 
-Run all services in Docker containers with ephemeral database:
+## Architecture
 
-```bash
-# Start all services (db, mock-auth, ingest, worker, dashboard)
-docker compose --profile dashboard up -d
-
-# Generate mock data (1 year of events)
-docker compose --profile generator run --rm generator
-
-# Or generate custom amount:
-docker compose --profile generator run --rm generator --days 30
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  INTERNAL NETWORK                                               │
+│                                                                 │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
+│  │ Drop-copy    │────▶│ Ingest API   │────▶│ PostgreSQL   │    │
+│  │ Producer     │     │ :3001        │     │ :5432        │    │
+│  │ (mocked)     │     └──────────────┘     └──────┬───────┘    │
+│  └──────────────┘                                 │            │
+│                       ┌──────────────┐            │            │
+│                       │ Worker       │◀───────────┤            │
+│                       │ (polls)      │────────────┤            │
+│                       └──────────────┘            │            │
+└───────────────────────────────────────────────────┼────────────┘
+                                                    │
+┌───────────────────────────────────────────────────┼────────────┐
+│  CLIENT-FACING                                    │            │
+│  ┌──────────────┐                                 │            │
+│  │ Dashboard    │◀────────────────────────────────┘            │
+│  │ :3000        │  (reads only)                                │
+│  └──────────────┘                                              │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-Access the dashboard at http://localhost:3000
+### Services
 
-To stop all services:
+| Service | Port | Type | Purpose |
+|---------|------|------|---------|
+| **ingest** | 3001 | Prod | Receives events from upstream internal systems (drop-copy pattern). Validates, deduplicates, queues for processing. Isolated from client traffic. |
+| **worker** | - | Prod | Async event processor. Polls queue, computes aggregates into read models. Horizontally scalable - add more workers for throughput. |
+| **dashboard** | 3000 | Prod | Client-facing Next.js app. Read-only access to pre-computed data. Serves org admins and managers. |
+| **db** | 5432 | Prod | PostgreSQL. Append-only event log + materialized read models. Single instance for V1. |
+| **mock-auth** | 3002 | Dev | Fake JWT issuer for local development. Replace with real IdP in production. |
+| **generator** | - | Dev | Simulates 1 year of historical events for demo/testing. Calls ingest API (not direct DB). |
+
+---
+
+## Running
+
+### Docker (Demo/Testing)
+
 ```bash
-docker compose --profile dashboard down
+docker compose --profile dashboard up -d          # Start all services
+docker compose --profile generator run --rm generator --days 30  # Generate data
+# Dashboard at http://localhost:3000
+docker compose --profile dashboard down           # Stop
 ```
 
-### Option 2: Local Development (Hot Reload)
-
-Run only the database in Docker, all services locally with hot reload:
+### Local Development
 
 ```bash
-# 1. Start PostgreSQL (ephemeral)
-pnpm db:start
-
-# 2. Install dependencies (first time only)
-pnpm install
-
-# 3. Start all services with hot reload
-pnpm dev:local
+pnpm db:start     # PostgreSQL in Docker
+pnpm install      # First time only
+pnpm dev:local    # All services with hot reload
+pnpm generate -- --days 30  # Generate mock data
 ```
 
-This runs concurrently:
-- **mock-auth** on http://localhost:3002
-- **ingest** on http://localhost:3001
-- **worker** (background processor)
-- **dashboard** on http://localhost:3000
+---
 
-To generate mock data locally:
-```bash
-pnpm generate -- --days 30
-```
+## What the Dashboard Measures
 
-To stop:
-- Press `Ctrl+C` to stop all services
-- Run `pnpm db:stop` to stop the database
+Cloud coding agents run tasks remotely (implement changes, run tests, push branches). Users interact via chat sessions and can "handoff" results locally to inspect or continue work. The dashboard answers:
 
-### Services Overview
+| Question | How We Measure It |
+|----------|-------------------|
+| **Who's using agents?** | Active users (DAU/WAU/30d), runs per user, sessions per user |
+| **Are agents reliable?** | Success/failure rate, top failure categories (tool error, model error, timeout) |
+| **How long do tasks take?** | Avg/P95 run duration, queue wait time, active agent time per session |
+| **What does it cost?** | Total cost, cost per run, token usage (input/output breakdown) |
+| **Do results need human fixes?** | Local handoff rate (user pulled results locally), post-handoff iteration (user ran more after handoff within 4h) |
+| **How much iteration?** | Avg runs per session (higher = more tweaking), session lifespan (first to last message) |
 
-| Service | Port | Description |
-|---------|------|-------------|
-| dashboard | 3000 | Next.js web UI |
-| mock-auth | 3002 | Authentication service |
-| ingest | 3001 | Event ingestion API |
-| worker | - | Event processor (no HTTP) |
-| db | 7000 | PostgreSQL database |
+**Key insight:** Sessions are ongoing chat threads with no explicit "done" state. Handoff + post-handoff iteration are proxies for "agent output required human intervention."
+
+---
+
+## Architecture Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Separate ingest from dashboard** | Different trust boundaries (internal S2S vs client-facing), different scaling needs (write-heavy vs read-heavy), cleaner security posture |
+| **Separate worker from ingest** | Decouples ingestion latency from processing time. Workers scale independently. Ingest stays fast (<50ms). |
+| **Event sourcing + read models** | Append-only log is system of record. Pre-computed aggregates for fast queries. Can replay to rebuild if needed. |
+| **Out-of-order tolerant projections** | Events may arrive late. Use `GREATEST`/`LEAST` for timestamps, upserts for idempotency. |
+| **Daily rollups for aggregates** | Store totals per day, compute averages at query time. Flexible date ranges without pre-computing every window. |
+| **P95 computed at query time** | Percentiles can't be pre-aggregated accurately. Acceptable for V1; add histogram buckets if slow. |
+| **Polling worker (no message queue)** | Simpler than Kafka/RabbitMQ. Postgres `FOR UPDATE SKIP LOCKED` for distributed locking. Good enough for V1 scale. |
+| **Per-user transaction batching** | Worker groups events by user to reduce lock contention on session/user stats. Org-level stats still a hotkey. |
+
+### Production Gaps (🔴 Critical / 🟠 High)
+
+| Gap | Current State | Before Production |
+|-----|---------------|-------------------|
+| 🔴 Ingest auth | None (internal network) | Add mTLS or signed JWT |
+| 🔴 Row-Level Security | App-layer `WHERE org_id=?` | Enable Postgres RLS policies |
+| 🔴 Identity provider | Mock JWT issuer | Integrate Auth0/Clerk/Cognito |
+| 🟠 Database HA | Single Postgres | Add replica or use managed PG |
+| 🟠 Dead-letter queue | Retry forever | Add max_attempts, move to DLQ |
+| 🟠 Data retention | Keep forever | Partition by month, archive old |
+
+---
+
+## Documentation
+
+All details in `.ai/` folder:
+- `PROJECT_BRIEF.md` - Domain model, metrics definitions, dashboard IA
+- `BACKEND_ARCHITECTURE.md` - Schemas, projections, query patterns
+- `TECH_STACK.md` - Technology choices and rationale
+- `TRADEOFFS_FUTURE_STEPS.md` - Full list with priorities
+- `AUTH_AND_ROLES.md` - Permissions matrix
