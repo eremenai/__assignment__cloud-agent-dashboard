@@ -8,8 +8,8 @@
 import type { AuthUser } from "@/lib/types/auth";
 import type { UserRole } from "@/lib/types/domain";
 
-// Default to localhost:3010 if not set (mock-auth service port)
-const MOCK_AUTH_URL = process.env.NEXT_PUBLIC_MOCK_AUTH_URL || "http://localhost:3010";
+// Default to localhost:3002 if not set (mock-auth service port)
+const MOCK_AUTH_URL = process.env.NEXT_PUBLIC_MOCK_AUTH_URL || "http://localhost:3002";
 
 interface MockAuthUser {
   userId: string;

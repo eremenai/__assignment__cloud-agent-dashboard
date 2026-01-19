@@ -46,7 +46,7 @@ export function PlatformKPIsSection({ data, isLoading }: PlatformKPIsSectionProp
         tooltip="Percentage of runs that completed successfully without errors, timeouts, or cancellations."
       />
       <KPICard
-        title="p95 Duration"
+        title="p95 Run Time"
         value={data ? formatDuration(data.p95DurationMs.current) : "0s"}
         trend={data?.p95DurationMs.changePercent}
         trendPreviousValue={data ? formatDuration(data.p95DurationMs.previous) : undefined}
@@ -54,7 +54,7 @@ export function PlatformKPIsSection({ data, isLoading }: PlatformKPIsSectionProp
         upIsGood={false}
         isLoading={isLoading}
         className="@container/card"
-        tooltip="The 95th percentile of run execution time. 95% of runs complete faster than this duration."
+        tooltip="95th percentile of run execution time. 95% of runs complete faster than this."
       />
       <KPICard
         title="Total Cost"

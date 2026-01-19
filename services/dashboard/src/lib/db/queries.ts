@@ -6,7 +6,7 @@
  */
 
 import { getDb, schema } from "@repo/shared/db";
-import { and, desc, eq, gte, lte, sql, sum } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql, sum } from "drizzle-orm";
 
 const { orgStatsDaily, userStatsDaily, sessionStats, runFacts, eventsRaw, users, orgs } = schema;
 
@@ -29,6 +29,8 @@ export interface OrgMetricsResult {
   errorsModel: number;
   errorsTimeout: number;
   errorsOther: number;
+  avgActiveTimeMs: number;
+  avgLifespanMs: number;
 }
 
 export async function getOrgMetricsFromDb(
@@ -38,7 +40,8 @@ export async function getOrgMetricsFromDb(
 ): Promise<OrgMetricsResult> {
   const db = getDb();
 
-  const result = await db
+  // Get aggregated daily stats
+  const dailyStatsResult = await db
     .select({
       totalRuns: sum(orgStatsDaily.runs_count),
       successRuns: sum(orgStatsDaily.success_runs),
@@ -64,7 +67,25 @@ export async function getOrgMetricsFromDb(
       )
     );
 
-  const row = result[0];
+  // Get session-level averages (avg active time and avg lifespan)
+  // Filter sessions that were active during the time range
+  const sessionAvgsResult = await db
+    .select({
+      avgActiveTimeMs: sql<number>`AVG(${sessionStats.active_agent_time_ms})`,
+      avgLifespanMs: sql<number>`AVG(EXTRACT(EPOCH FROM (${sessionStats.last_event_at} - ${sessionStats.first_message_at})) * 1000)`,
+    })
+    .from(sessionStats)
+    .where(
+      and(
+        eq(sessionStats.org_id, orgId),
+        gte(sessionStats.first_message_at, fromDate),
+        lte(sessionStats.first_message_at, toDate)
+      )
+    );
+
+  const row = dailyStatsResult[0];
+  const sessionRow = sessionAvgsResult[0];
+
   return {
     totalRuns: Number(row?.totalRuns ?? 0),
     successRuns: Number(row?.successRuns ?? 0),
@@ -80,6 +101,8 @@ export async function getOrgMetricsFromDb(
     errorsModel: Number(row?.errorsModel ?? 0),
     errorsTimeout: Number(row?.errorsTimeout ?? 0),
     errorsOther: Number(row?.errorsOther ?? 0),
+    avgActiveTimeMs: Number(sessionRow?.avgActiveTimeMs ?? 0),
+    avgLifespanMs: Number(sessionRow?.avgLifespanMs ?? 0),
   };
 }
 
@@ -94,6 +117,16 @@ export interface OrgDailyTrend {
   cost: number;
   successRate: number;
   activeUsers: number;
+  inputTokens: number;
+  outputTokens: number;
+  successRuns: number;
+  failedRuns: number;
+  errorsTool: number;
+  errorsModel: number;
+  errorsTimeout: number;
+  errorsOther: number;
+  sessionsWithHandoff: number;
+  sessionsWithPostHandoff: number;
 }
 
 export async function getOrgTrendsFromDb(
@@ -103,7 +136,8 @@ export async function getOrgTrendsFromDb(
 ): Promise<OrgDailyTrend[]> {
   const db = getDb();
 
-  const results = await db
+  // Get org stats
+  const orgResults = await db
     .select({
       day: orgStatsDaily.day,
       runs: orgStatsDaily.runs_count,
@@ -112,6 +146,14 @@ export async function getOrgTrendsFromDb(
       successRuns: orgStatsDaily.success_runs,
       failedRuns: orgStatsDaily.failed_runs,
       activeUsers: orgStatsDaily.active_users_count,
+      inputTokens: orgStatsDaily.total_input_tokens,
+      outputTokens: orgStatsDaily.total_output_tokens,
+      errorsTool: orgStatsDaily.errors_tool,
+      errorsModel: orgStatsDaily.errors_model,
+      errorsTimeout: orgStatsDaily.errors_timeout,
+      errorsOther: orgStatsDaily.errors_other,
+      sessionsWithHandoff: orgStatsDaily.sessions_with_handoff,
+      sessionsWithPostHandoff: orgStatsDaily.sessions_with_post_handoff,
     })
     .from(orgStatsDaily)
     .where(
@@ -123,16 +165,49 @@ export async function getOrgTrendsFromDb(
     )
     .orderBy(orgStatsDaily.day);
 
-  return results.map((row) => {
+  // Get active users count per day from user_stats_daily (distinct users with activity)
+  const activeUsersResults = await db
+    .select({
+      day: userStatsDaily.day,
+      activeUsers: sql<number>`count(DISTINCT ${userStatsDaily.user_id})`,
+    })
+    .from(userStatsDaily)
+    .where(
+      and(
+        eq(userStatsDaily.org_id, orgId),
+        gte(userStatsDaily.day, fromDate.toISOString().split("T")[0]),
+        lte(userStatsDaily.day, toDate.toISOString().split("T")[0])
+      )
+    )
+    .groupBy(userStatsDaily.day);
+
+  // Create a map for quick lookup
+  const activeUsersMap = new Map<string, number>();
+  for (const row of activeUsersResults) {
+    activeUsersMap.set(String(row.day), Number(row.activeUsers ?? 0));
+  }
+
+  return orgResults.map((row) => {
     const totalRuns = Number(row.runs ?? 0);
     const successRuns = Number(row.successRuns ?? 0);
+    const dayStr = String(row.day);
     return {
-      day: String(row.day),
+      day: dayStr,
       runs: totalRuns,
       sessions: Number(row.sessions ?? 0),
       cost: Number(row.cost ?? 0),
       successRate: totalRuns > 0 ? (successRuns / totalRuns) * 100 : 0,
-      activeUsers: Number(row.activeUsers ?? 0),
+      activeUsers: activeUsersMap.get(dayStr) ?? Number(row.activeUsers ?? 0),
+      inputTokens: Number(row.inputTokens ?? 0),
+      outputTokens: Number(row.outputTokens ?? 0),
+      successRuns,
+      failedRuns: Number(row.failedRuns ?? 0),
+      errorsTool: Number(row.errorsTool ?? 0),
+      errorsModel: Number(row.errorsModel ?? 0),
+      errorsTimeout: Number(row.errorsTimeout ?? 0),
+      errorsOther: Number(row.errorsOther ?? 0),
+      sessionsWithHandoff: Number(row.sessionsWithHandoff ?? 0),
+      sessionsWithPostHandoff: Number(row.sessionsWithPostHandoff ?? 0),
     };
   });
 }
@@ -145,6 +220,8 @@ export interface SessionListItem {
   orgId: string;
   sessionId: string;
   userId: string | null;
+  userEmail: string | null;
+  userName: string | null;
   firstMessageAt: Date | null;
   lastEventAt: Date | null;
   runsCount: number;
@@ -163,62 +240,183 @@ export interface SessionsListResult {
   total: number;
 }
 
+export interface SessionsListOptions {
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  search?: string;
+  status?: string;
+  durationRange?: string;
+  costRange?: string;
+  hasHandoff?: string;
+  hasPostHandoffIteration?: string;
+}
+
 export async function getSessionsListFromDb(
   orgId: string,
   fromDate: Date,
   toDate: Date,
   limit: number,
-  offset: number
+  offset: number,
+  options?: SessionsListOptions
 ): Promise<SessionsListResult> {
   const db = getDb();
+  const {
+    sortBy = "first_message_at",
+    sortOrder = "desc",
+    search,
+    status,
+    durationRange,
+    costRange,
+    hasHandoff,
+    hasPostHandoffIteration,
+  } = options ?? {};
+
+  // Build where conditions
+  const conditions = [
+    eq(sessionStats.org_id, orgId),
+    gte(sessionStats.first_message_at, fromDate),
+    lte(sessionStats.first_message_at, toDate),
+  ];
+
+  // Add search filter (searches session_id)
+  if (search) {
+    conditions.push(sql`${sessionStats.session_id} ILIKE ${`%${search}%`}`);
+  }
+
+  // Add status filter
+  if (status === "has_failures") {
+    conditions.push(sql`${sessionStats.failed_runs} > 0`);
+  } else if (status === "all_succeeded") {
+    conditions.push(sql`${sessionStats.failed_runs} = 0 AND ${sessionStats.runs_count} > 0`);
+  }
+
+  // Add duration range filter (lifespan = last_event_at - first_message_at)
+  if (durationRange && durationRange !== "any") {
+    const lifespanMs = sql`EXTRACT(EPOCH FROM (${sessionStats.last_event_at} - ${sessionStats.first_message_at})) * 1000`;
+    switch (durationRange) {
+      case "<5m":
+        conditions.push(sql`${lifespanMs} < ${5 * 60 * 1000}`);
+        break;
+      case "5m-30m":
+        conditions.push(sql`${lifespanMs} >= ${5 * 60 * 1000} AND ${lifespanMs} < ${30 * 60 * 1000}`);
+        break;
+      case "30m-1h":
+        conditions.push(sql`${lifespanMs} >= ${30 * 60 * 1000} AND ${lifespanMs} < ${60 * 60 * 1000}`);
+        break;
+      case ">1h":
+        conditions.push(sql`${lifespanMs} >= ${60 * 60 * 1000}`);
+        break;
+    }
+  }
+
+  // Add cost range filter (cost is in decimal dollars, convert to cents for comparison)
+  if (costRange && costRange !== "any") {
+    switch (costRange) {
+      case "<10":
+        conditions.push(sql`${sessionStats.cost_total} < ${10}`);
+        break;
+      case "10-50":
+        conditions.push(sql`${sessionStats.cost_total} >= ${10} AND ${sessionStats.cost_total} < ${50}`);
+        break;
+      case "50-100":
+        conditions.push(sql`${sessionStats.cost_total} >= ${50} AND ${sessionStats.cost_total} < ${100}`);
+        break;
+      case ">100":
+        conditions.push(sql`${sessionStats.cost_total} >= ${100}`);
+        break;
+    }
+  }
+
+  // Add handoff filter
+  if (hasHandoff === "yes") {
+    conditions.push(sql`${sessionStats.handoffs_count} > 0`);
+  } else if (hasHandoff === "no") {
+    conditions.push(sql`${sessionStats.handoffs_count} = 0`);
+  }
+
+  // Add post-handoff iteration filter
+  if (hasPostHandoffIteration === "yes") {
+    conditions.push(sql`${sessionStats.has_post_handoff_iteration} = true`);
+  } else if (hasPostHandoffIteration === "no") {
+    conditions.push(sql`${sessionStats.has_post_handoff_iteration} = false`);
+  }
+
+  const whereClause = and(...conditions);
 
   // Get total count
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(sessionStats)
-    .where(
-      and(
-        eq(sessionStats.org_id, orgId),
-        gte(sessionStats.last_event_at, fromDate),
-        lte(sessionStats.first_message_at, toDate)
-      )
-    );
+    .where(whereClause);
 
   const total = Number(countResult[0]?.count ?? 0);
 
-  // Get paginated results
+  // Build order by clause
+  const orderByColumn = getSessionSortColumn(sortBy);
+  const orderByDir = sortOrder === "asc" ? asc : desc;
+
+  // Get paginated results with user info
   const results = await db
-    .select()
+    .select({
+      sessionStats: sessionStats,
+      userEmail: users.email,
+      userName: users.display_name,
+    })
     .from(sessionStats)
-    .where(
-      and(
-        eq(sessionStats.org_id, orgId),
-        gte(sessionStats.last_event_at, fromDate),
-        lte(sessionStats.first_message_at, toDate)
-      )
-    )
-    .orderBy(desc(sessionStats.last_event_at))
+    .leftJoin(users, eq(sessionStats.user_id, users.user_id))
+    .where(whereClause)
+    .orderBy(orderByDir(orderByColumn))
     .limit(limit)
     .offset(offset);
 
   const sessions: SessionListItem[] = results.map((row) => ({
-    orgId: row.org_id,
-    sessionId: row.session_id,
-    userId: row.user_id,
-    firstMessageAt: row.first_message_at,
-    lastEventAt: row.last_event_at,
-    runsCount: row.runs_count ?? 0,
-    successRuns: row.success_runs ?? 0,
-    failedRuns: row.failed_runs ?? 0,
-    activeAgentTimeMs: row.active_agent_time_ms ?? 0,
-    handoffsCount: row.handoffs_count ?? 0,
-    hasPostHandoffIteration: row.has_post_handoff_iteration,
-    costTotal: Number(row.cost_total ?? 0),
-    inputTokensTotal: row.input_tokens_total ?? 0,
-    outputTokensTotal: row.output_tokens_total ?? 0,
+    orgId: row.sessionStats.org_id,
+    sessionId: row.sessionStats.session_id,
+    userId: row.sessionStats.user_id,
+    userEmail: row.userEmail,
+    userName: row.userName,
+    firstMessageAt: row.sessionStats.first_message_at,
+    lastEventAt: row.sessionStats.last_event_at,
+    runsCount: row.sessionStats.runs_count ?? 0,
+    successRuns: row.sessionStats.success_runs ?? 0,
+    failedRuns: row.sessionStats.failed_runs ?? 0,
+    activeAgentTimeMs: row.sessionStats.active_agent_time_ms ?? 0,
+    handoffsCount: row.sessionStats.handoffs_count ?? 0,
+    hasPostHandoffIteration: row.sessionStats.has_post_handoff_iteration,
+    costTotal: Number(row.sessionStats.cost_total ?? 0),
+    inputTokensTotal: row.sessionStats.input_tokens_total ?? 0,
+    outputTokensTotal: row.sessionStats.output_tokens_total ?? 0,
   }));
 
   return { sessions, total };
+}
+
+function getSessionSortColumn(sortBy: string) {
+  switch (sortBy) {
+    case "createdAt":
+    case "first_message_at":
+      return sessionStats.first_message_at;
+    case "lifespanMs":
+      return sql`EXTRACT(EPOCH FROM (${sessionStats.last_event_at} - ${sessionStats.first_message_at})) * 1000`;
+    case "activeTimeMs":
+    case "active_agent_time_ms":
+      return sessionStats.active_agent_time_ms;
+    case "runCount":
+    case "runs_count":
+      return sessionStats.runs_count;
+    case "localHandoffCount":
+    case "handoffs_count":
+      return sessionStats.handoffs_count;
+    case "successRate":
+      return sql`CASE WHEN ${sessionStats.runs_count} > 0 THEN ${sessionStats.success_runs}::float / ${sessionStats.runs_count} ELSE 0 END`;
+    case "totalTokens":
+      return sql`${sessionStats.input_tokens_total} + ${sessionStats.output_tokens_total}`;
+    case "totalCostCents":
+    case "cost_total":
+      return sessionStats.cost_total;
+    default:
+      return sessionStats.first_message_at;
+  }
 }
 
 // ============================================================================
@@ -244,6 +442,8 @@ export interface SessionDetail {
     eventId: string;
     eventType: string;
     occurredAt: Date;
+    userId: string;
+    runId: string | null;
     payload: Record<string, unknown>;
   }>;
 }
@@ -254,10 +454,15 @@ export async function getSessionDetailFromDb(
 ): Promise<SessionDetail | null> {
   const db = getDb();
 
-  // Get session stats
+  // Get session stats with user info
   const sessionResults = await db
-    .select()
+    .select({
+      sessionStats: sessionStats,
+      userEmail: users.email,
+      userName: users.display_name,
+    })
     .from(sessionStats)
+    .leftJoin(users, eq(sessionStats.user_id, users.user_id))
     .where(and(eq(sessionStats.org_id, orgId), eq(sessionStats.session_id, sessionId)))
     .limit(1);
 
@@ -265,11 +470,14 @@ export async function getSessionDetailFromDb(
     return null;
   }
 
-  const row = sessionResults[0];
+  const result = sessionResults[0];
+  const row = result.sessionStats;
   const session: SessionListItem = {
     orgId: row.org_id,
     sessionId: row.session_id,
     userId: row.user_id,
+    userEmail: result.userEmail,
+    userName: result.userName,
     firstMessageAt: row.first_message_at,
     lastEventAt: row.last_event_at,
     runsCount: row.runs_count ?? 0,
@@ -288,7 +496,7 @@ export async function getSessionDetailFromDb(
     .select()
     .from(runFacts)
     .where(and(eq(runFacts.org_id, orgId), eq(runFacts.session_id, sessionId)))
-    .orderBy(runFacts.completed_at);
+    .orderBy(asc(runFacts.started_at));
 
   const runs = runResults.map((r) => ({
     runId: r.run_id,
@@ -310,6 +518,8 @@ export async function getSessionDetailFromDb(
       eventId: eventsRaw.event_id,
       eventType: eventsRaw.event_type,
       occurredAt: eventsRaw.occurred_at,
+      userId: eventsRaw.user_id,
+      runId: eventsRaw.run_id,
       payload: eventsRaw.payload,
     })
     .from(eventsRaw)
@@ -320,6 +530,8 @@ export async function getSessionDetailFromDb(
     eventId: e.eventId,
     eventType: e.eventType,
     occurredAt: e.occurredAt,
+    userId: e.userId,
+    runId: e.runId,
     payload: e.payload as Record<string, unknown>,
   }));
 
@@ -340,8 +552,11 @@ export interface UserListItem {
   failedRuns: number;
   totalCost: number;
   totalDurationMs: number;
+  totalLifespanMs: number;
   sessionsWithHandoff: number;
   sessionsWithPostHandoff: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
 }
 
 export interface UsersListResult {
@@ -349,14 +564,38 @@ export interface UsersListResult {
   total: number;
 }
 
+export interface UsersListOptions {
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  search?: string;
+}
+
 export async function getUsersListFromDb(
   orgId: string,
   fromDate: Date,
   toDate: Date,
   limit: number,
-  offset: number
+  offset: number,
+  options?: UsersListOptions
 ): Promise<UsersListResult> {
   const db = getDb();
+  const { sortBy = "runsCount", sortOrder = "desc", search } = options ?? {};
+
+  // Build where conditions for user_stats_daily
+  const conditions = [
+    eq(userStatsDaily.org_id, orgId),
+    gte(userStatsDaily.day, fromDate.toISOString().split("T")[0]),
+    lte(userStatsDaily.day, toDate.toISOString().split("T")[0]),
+  ];
+
+  // Add search filter (searches user email or display name)
+  if (search) {
+    conditions.push(
+      sql`(${users.email} ILIKE ${`%${search}%`} OR ${users.display_name} ILIKE ${`%${search}%`})`
+    );
+  }
+
+  const whereClause = and(...conditions);
 
   // Aggregate user stats for the date range
   const results = await db
@@ -372,20 +611,40 @@ export async function getUsersListFromDb(
       totalDurationMs: sum(userStatsDaily.total_duration_ms),
       sessionsWithHandoff: sum(userStatsDaily.sessions_with_handoff),
       sessionsWithPostHandoff: sum(userStatsDaily.sessions_with_post_handoff),
+      totalInputTokens: sum(userStatsDaily.total_input_tokens),
+      totalOutputTokens: sum(userStatsDaily.total_output_tokens),
     })
     .from(userStatsDaily)
     .leftJoin(users, eq(userStatsDaily.user_id, users.user_id))
-    .where(
-      and(
-        eq(userStatsDaily.org_id, orgId),
-        gte(userStatsDaily.day, fromDate.toISOString().split("T")[0]),
-        lte(userStatsDaily.day, toDate.toISOString().split("T")[0])
-      )
-    )
+    .where(whereClause)
     .groupBy(userStatsDaily.user_id, users.email, users.display_name)
-    .orderBy(desc(sum(userStatsDaily.runs_count)))
+    .orderBy(sortOrder === "asc" ? asc(getUserSortColumn(sortBy)) : desc(getUserSortColumn(sortBy)))
     .limit(limit)
     .offset(offset);
+
+  // Get user IDs to fetch lifespan data
+  const userIds = results.map((r) => r.userId);
+
+  // Get average lifespan per user from session_stats
+  const lifespanResults = userIds.length > 0
+    ? await db
+        .select({
+          userId: sessionStats.user_id,
+          totalLifespanMs: sql<number>`SUM(EXTRACT(EPOCH FROM (${sessionStats.last_event_at} - ${sessionStats.first_message_at})) * 1000)`,
+        })
+        .from(sessionStats)
+        .where(
+          and(
+            eq(sessionStats.org_id, orgId),
+            gte(sessionStats.first_message_at, fromDate),
+            lte(sessionStats.first_message_at, toDate),
+            sql`${sessionStats.user_id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`
+          )
+        )
+        .groupBy(sessionStats.user_id)
+    : [];
+
+  const lifespanMap = new Map(lifespanResults.map((r) => [r.userId, Number(r.totalLifespanMs ?? 0)]));
 
   const usersList: UserListItem[] = results.map((row) => ({
     userId: row.userId,
@@ -397,25 +656,112 @@ export async function getUsersListFromDb(
     failedRuns: Number(row.failedRuns ?? 0),
     totalCost: Number(row.totalCost ?? 0),
     totalDurationMs: Number(row.totalDurationMs ?? 0),
+    totalLifespanMs: lifespanMap.get(row.userId) ?? 0,
     sessionsWithHandoff: Number(row.sessionsWithHandoff ?? 0),
     sessionsWithPostHandoff: Number(row.sessionsWithPostHandoff ?? 0),
+    totalInputTokens: Number(row.totalInputTokens ?? 0),
+    totalOutputTokens: Number(row.totalOutputTokens ?? 0),
   }));
 
   // Get total distinct users (for pagination)
   const countResult = await db
-    .select({ count: sql<number>`count(DISTINCT user_id)` })
+    .select({ count: sql<number>`count(DISTINCT ${userStatsDaily.user_id})` })
     .from(userStatsDaily)
-    .where(
-      and(
-        eq(userStatsDaily.org_id, orgId),
-        gte(userStatsDaily.day, fromDate.toISOString().split("T")[0]),
-        lte(userStatsDaily.day, toDate.toISOString().split("T")[0])
-      )
-    );
+    .leftJoin(users, eq(userStatsDaily.user_id, users.user_id))
+    .where(whereClause);
 
   const total = Number(countResult[0]?.count ?? 0);
 
   return { users: usersList, total };
+}
+
+function getUserSortColumn(sortBy: string) {
+  switch (sortBy) {
+    case "sessionCount":
+    case "sessions_count":
+      return sum(userStatsDaily.sessions_count);
+    case "runCount":
+    case "runs_count":
+      return sum(userStatsDaily.runs_count);
+    case "totalCostCents":
+    case "total_cost":
+      return sum(userStatsDaily.total_cost);
+    case "totalTokens":
+      return sql`${sum(userStatsDaily.total_input_tokens)} + ${sum(userStatsDaily.total_output_tokens)}`;
+    case "avgRunsPerSession":
+      return sql`CASE WHEN ${sum(userStatsDaily.sessions_count)} > 0 THEN ${sum(userStatsDaily.runs_count)}::float / ${sum(userStatsDaily.sessions_count)} ELSE 0 END`;
+    case "avgActiveTimeMs":
+    case "total_duration_ms":
+      return sum(userStatsDaily.total_duration_ms);
+    case "successRate":
+      return sql`CASE WHEN ${sum(userStatsDaily.runs_count)} > 0 THEN ${sum(userStatsDaily.success_runs)}::float / ${sum(userStatsDaily.runs_count)} ELSE 0 END`;
+    case "localHandoffRate":
+    case "handoffRate":
+      return sql`CASE WHEN ${sum(userStatsDaily.sessions_count)} > 0 THEN ${sum(userStatsDaily.sessions_with_handoff)}::float / ${sum(userStatsDaily.sessions_count)} ELSE 0 END`;
+    case "postHandoffIterationRate":
+      return sql`CASE WHEN ${sum(userStatsDaily.sessions_with_handoff)} > 0 THEN ${sum(userStatsDaily.sessions_with_post_handoff)}::float / ${sum(userStatsDaily.sessions_with_handoff)} ELSE 0 END`;
+    case "costPerRun":
+      return sql`CASE WHEN ${sum(userStatsDaily.runs_count)} > 0 THEN ${sum(userStatsDaily.total_cost)}::float / ${sum(userStatsDaily.runs_count)} ELSE 0 END`;
+    default:
+      return sum(userStatsDaily.runs_count);
+  }
+}
+
+// ============================================================================
+// User Trends (Daily)
+// ============================================================================
+
+export interface UserDailyTrend {
+  day: string;
+  runs: number;
+  sessions: number;
+  cost: number;
+  successRuns: number;
+  failedRuns: number;
+  sessionsWithHandoff: number;
+  sessionsWithPostHandoff: number;
+}
+
+export async function getUserTrendsFromDb(
+  orgId: string,
+  userId: string,
+  fromDate: Date,
+  toDate: Date
+): Promise<UserDailyTrend[]> {
+  const db = getDb();
+
+  const results = await db
+    .select({
+      day: userStatsDaily.day,
+      runs: userStatsDaily.runs_count,
+      sessions: userStatsDaily.sessions_count,
+      cost: userStatsDaily.total_cost,
+      successRuns: userStatsDaily.success_runs,
+      failedRuns: userStatsDaily.failed_runs,
+      sessionsWithHandoff: userStatsDaily.sessions_with_handoff,
+      sessionsWithPostHandoff: userStatsDaily.sessions_with_post_handoff,
+    })
+    .from(userStatsDaily)
+    .where(
+      and(
+        eq(userStatsDaily.org_id, orgId),
+        eq(userStatsDaily.user_id, userId),
+        gte(userStatsDaily.day, fromDate.toISOString().split("T")[0]),
+        lte(userStatsDaily.day, toDate.toISOString().split("T")[0])
+      )
+    )
+    .orderBy(userStatsDaily.day);
+
+  return results.map((row) => ({
+    day: String(row.day),
+    runs: Number(row.runs ?? 0),
+    sessions: Number(row.sessions ?? 0),
+    cost: Number(row.cost ?? 0),
+    successRuns: Number(row.successRuns ?? 0),
+    failedRuns: Number(row.failedRuns ?? 0),
+    sessionsWithHandoff: Number(row.sessionsWithHandoff ?? 0),
+    sessionsWithPostHandoff: Number(row.sessionsWithPostHandoff ?? 0),
+  }));
 }
 
 // ============================================================================
@@ -540,8 +886,8 @@ export async function getP95DurationFromDb(
     SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms) as p95
     FROM run_facts
     WHERE org_id = ${orgId}
-      AND completed_at >= ${fromDate}
-      AND completed_at <= ${toDate}
+      AND completed_at >= ${fromDate.toISOString()}
+      AND completed_at <= ${toDate.toISOString()}
       AND duration_ms IS NOT NULL
   `);
 

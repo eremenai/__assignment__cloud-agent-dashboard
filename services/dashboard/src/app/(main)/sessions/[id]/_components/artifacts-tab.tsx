@@ -41,7 +41,10 @@ export function ArtifactsTab({ artifacts, handoffs }: ArtifactsTabProps) {
         </CardHeader>
         <CardContent>
           {artifacts.files.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No file changes recorded.</p>
+            <div className="rounded-md border border-dashed p-6 text-center">
+              <p className="text-muted-foreground text-sm">Artifact tracking coming soon.</p>
+              <p className="mt-1 text-muted-foreground/60 text-xs">File changes will be tracked in a future release.</p>
+            </div>
           ) : (
             <div className="space-y-2">
               {artifacts.files.map((file) => (
@@ -84,7 +87,7 @@ export function ArtifactsTab({ artifacts, handoffs }: ArtifactsTabProps) {
               </TableHeader>
               <TableBody>
                 {handoffs.map((handoff, idx) => (
-                  <TableRow key={handoff.handoffId}>
+                  <TableRow key={handoff.eventId ?? `handoff-${idx}`}>
                     <TableCell className="font-mono">{idx + 1}</TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(handoff.timestamp)}</TableCell>
                     <TableCell>{handoff.userId}</TableCell>

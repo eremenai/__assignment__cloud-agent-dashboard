@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowUpDown, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 
 import { EmptyState, RoleBadge } from "@/components/analytics";
+import { useTimeRangeLink } from "@/components/layout/time-range-selector";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +26,8 @@ interface UsersTableProps {
 }
 
 export function UsersTable({ users, pagination, sort, onPageChange, onSortChange }: UsersTableProps) {
+  const getTimeRangeLink = useTimeRangeLink();
+
   if (users.length === 0) {
     return <EmptyState title="No users found" description="No users match your current filters." />;
   }
@@ -111,7 +114,7 @@ export function UsersTable({ users, pagination, sort, onPageChange, onSortChange
             {users.map((user) => (
               <TableRow key={user.userId}>
                 <TableCell>
-                  <Link href={`/users/${user.userId}`} className="flex flex-col hover:underline">
+                  <Link href={getTimeRangeLink(`/users/${user.userId}`)} className="flex flex-col hover:underline">
                     <span className="font-medium">{user.name}</span>
                     <span className="text-muted-foreground text-xs">{user.email}</span>
                   </Link>

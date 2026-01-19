@@ -26,8 +26,9 @@ export async function projectLocalHandoff(
     WHERE org_id = ${event.org_id} AND session_id = ${event.session_id}
   `);
 
-  const rows = currentStats as unknown as { handoffs_count: number; first_message_at: Date | string | null }[];
-  const isFirstHandoff = rows.length === 0 || rows[0].handoffs_count === 0;
+  const rows = currentStats as unknown as { handoffs_count: number | string; first_message_at: Date | string | null }[];
+  // Note: PostgreSQL bigint may be returned as string, so use Number() for comparison
+  const isFirstHandoff = rows.length === 0 || Number(rows[0].handoffs_count) === 0;
   const sessionDay = rows[0]?.first_message_at
     ? ensureDate(rows[0].first_message_at).toISOString().split("T")[0]
     : occurredAt.toISOString().split("T")[0];

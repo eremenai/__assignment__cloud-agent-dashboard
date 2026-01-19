@@ -79,7 +79,26 @@ This document captures all tradeoffs made across the system (frontend + backend)
 
 ## 🟠 High (Address for Scale/Reliability)
 
-### 5. ~~Query-Time Aggregation (No Daily Rollups)~~ ✅ RESOLVED
+### 5. org_stats_daily is a Hotkey (Lock Contention)
+
+**Current state:** The worker processes events grouped by user, with each user's events in a separate transaction. However, `org_stats_daily` is still locked per transaction since all users in an org update the same daily row.
+
+**Risk:** High contention on `org_stats_daily` when many users in the same org have concurrent events. Workers wait for each other when processing events from the same org on the same day.
+
+**Future optimization options:**
+- **Buffer in memory**: Accumulate org stats updates in memory, flush periodically (every N seconds or M events)
+- **Advisory locks with retry**: Use Postgres advisory locks instead of row locks, retry on conflict
+- **Partition by hour**: Use `org_stats_hourly` instead of daily, aggregate to daily in a separate job
+- **Separate aggregation job**: Remove org stats updates from event projection entirely; run a periodic job that recalculates org stats from user stats (`SELECT SUM(*) FROM user_stats_daily GROUP BY org_id, day`)
+- **Optimistic concurrency**: Use version column with retry on conflict
+
+**Recommended approach:** Separate aggregation job is cleanest - derive org stats from user stats periodically. This eliminates the hotkey entirely and makes projections user-scoped.
+
+**Effort:** Medium (1-2 days)
+
+---
+
+### 6. ~~Query-Time Aggregation (No Daily Rollups)~~ ✅ RESOLVED
 
 **Status:** Implemented `org_stats_daily` and `user_stats_daily` tables.
 
@@ -89,7 +108,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 6. Single Postgres Instance (No Replicas)
+### 7. Single Postgres Instance (No Replicas)
 
 **Current state:** Single PostgreSQL container. No read replicas, no failover.
 
@@ -104,7 +123,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 7. No Dead-Letter Queue for Failed Events
+### 8. No Dead-Letter Queue for Failed Events
 
 **Current state:** Worker retries failed events (increments `attempts`, records `last_error`). No max retries or dead-letter handling.
 
@@ -120,7 +139,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 8. No Data Retention/Archiving Strategy
+### 9. No Data Retention/Archiving Strategy
 
 **Current state:** All events kept forever. No partitioning, no archival.
 
@@ -136,7 +155,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 9. No Real-Time Updates (Polling Only)
+### 10. No Real-Time Updates (Polling Only)
 
 **Current state:** Dashboard shows point-in-time data. Users must refresh to see new data.
 
@@ -151,7 +170,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 10. No Caching Layer
+### 11. No Caching Layer
 
 **Current state:** Every dashboard query hits Postgres directly. No Redis or in-memory cache.
 
@@ -170,7 +189,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ## 🟡 Medium (Quality/DX Improvements)
 
-### 11. No CI/CD Pipeline
+### 12. No CI/CD Pipeline
 
 **Current state:** No automated builds, tests, or deployments configured.
 
@@ -183,7 +202,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 12. No Monitoring/Alerting
+### 13. No Monitoring/Alerting
 
 **Current state:** No observability. Errors go to console logs only.
 
@@ -197,7 +216,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 13. No OpenAPI/Swagger Documentation
+### 14. No OpenAPI/Swagger Documentation
 
 **Current state:** API contracts documented in markdown only. No machine-readable spec.
 
@@ -210,7 +229,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 14. No Rate Limiting on Ingest
+### 15. No Rate Limiting on Ingest
 
 **Current state:** Ingest API accepts unlimited requests. No throttling.
 
@@ -225,7 +244,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 15. No Backfill/Replay Tooling
+### 16. No Backfill/Replay Tooling
 
 **Current state:** If projections get corrupted, no easy way to rebuild from raw events.
 
@@ -238,7 +257,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 16. CSV Export Deferred
+### 17. CSV Export Deferred
 
 **Current state:** No CSV export functionality for sessions or users lists.
 
@@ -253,7 +272,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 17. Teams Feature Deferred
+### 18. Teams Feature Deferred
 
 **Current state:** Data model does not include teams. Users see org-level or individual views only.
 
@@ -269,7 +288,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 18. No External Integrations
+### 19. No External Integrations
 
 **Current state:** No GitHub, GitLab, CI/CD, Slack, or other integrations.
 
@@ -284,7 +303,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 19. No Tagging System
+### 20. No Tagging System
 
 **Current state:** Sessions/runs cannot be tagged or categorized by users.
 
@@ -299,7 +318,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ## 🟢 Low (Polish/Convenience)
 
-### 20. SSR-First Data Fetching (No TanStack Query)
+### 21. SSR-First Data Fetching (No TanStack Query)
 
 **Current state:** Dashboard uses SSR for data fetching. No client-side caching or background refetch.
 
@@ -314,7 +333,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 21. No Keyboard Shortcuts
+### 22. No Keyboard Shortcuts
 
 **Current state:** All interactions are mouse/touch only.
 
@@ -326,7 +345,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 22. No Accessibility Audit
+### 23. No Accessibility Audit
 
 **Current state:** Using shadcn/ui (Radix primitives), which has good a11y defaults. But no formal audit.
 
@@ -340,7 +359,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 23. No Internationalization (i18n)
+### 24. No Internationalization (i18n)
 
 **Current state:** English only. No translation infrastructure.
 
@@ -353,7 +372,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 24. Single Theme (No Dark Mode Toggle)
+### 25. Single Theme (No Dark Mode Toggle)
 
 **Current state:** Default theme only. Theme system was removed for simplicity.
 
@@ -367,7 +386,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 25. Basic Responsive Design
+### 26. Basic Responsive Design
 
 **Current state:** Dashboard works on mobile but optimized for desktop. Complex tables may need horizontal scroll.
 
@@ -380,7 +399,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 26. USD-Only Cost Display
+### 27. USD-Only Cost Display
 
 **Current state:** All costs displayed in USD. No currency conversion.
 
@@ -393,7 +412,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 27. Single Timezone Assumption
+### 28. Single Timezone Assumption
 
 **Current state:** Times displayed in browser local timezone. No explicit timezone handling.
 
@@ -406,7 +425,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 
 ---
 
-### 28. No Offline Support
+### 29. No Offline Support
 
 **Current state:** Dashboard requires network connection. No service worker or offline caching.
 
@@ -425,7 +444,7 @@ Worker updates daily aggregates incrementally on each event. Dashboard queries s
 | Category | Critical | High | Medium | Low | Resolved |
 |----------|----------|------|--------|-----|----------|
 | Security | 3 | 0 | 0 | 0 | 0 |
-| Scalability | 0 | 3 | 1 | 0 | 1 (daily rollups) |
+| Scalability | 0 | 4 | 1 | 0 | 1 (daily rollups) |
 | Reliability | 1 | 2 | 1 | 0 | 0 |
 | Features | 0 | 0 | 5 | 0 | 0 |
 | DevOps | 0 | 0 | 3 | 0 | 0 |

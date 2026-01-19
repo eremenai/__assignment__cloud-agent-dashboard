@@ -38,7 +38,7 @@ export function GlobalKPIsSection({ kpis }: GlobalKPIsSectionProps) {
           upIsGood
         />
         <KPICard
-          title="p95 Duration"
+          title="p95 Run Time"
           value={formatDuration(kpis.p95DurationMs.current)}
           trend={kpis.p95DurationMs.changePercent}
           upIsGood={false}

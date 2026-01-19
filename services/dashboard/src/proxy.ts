@@ -20,7 +20,7 @@ const JWT_AUDIENCE = "cloud-agent-dashboard";
 const COOKIE_NAME = "auth_token";
 
 // Auth service URL for redirecting unauthenticated users
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || "http://localhost:3010";
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || "http://localhost:3002";
 
 // Public paths that don't require authentication
 const PUBLIC_PATHS = [

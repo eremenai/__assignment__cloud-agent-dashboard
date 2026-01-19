@@ -4,6 +4,7 @@
  * Trend line chart component for time series data.
  */
 
+import { TrendingUp } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,7 @@ export function TrendLineChart({
   secondaryYAxisFormatter,
 }: TrendLineChartProps) {
   const hasSecondaryAxis = secondaryAxisKeys.length > 0;
+  const isEmpty = data.length === 0;
 
   return (
     <Card className={className}>
@@ -68,6 +70,15 @@ export function TrendLineChart({
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center text-center" style={{ height }}>
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+              <TrendingUp className="size-5 text-muted-foreground" />
+            </div>
+            <p className="mt-3 font-medium text-muted-foreground text-sm">No data available</p>
+            <p className="mt-1 text-muted-foreground/70 text-xs">Data will appear here once available</p>
+          </div>
+        ) : (
         <ChartContainer config={config} className="w-full" style={{ height }}>
           <LineChart data={data}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -135,6 +146,7 @@ export function TrendLineChart({
             ))}
           </LineChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

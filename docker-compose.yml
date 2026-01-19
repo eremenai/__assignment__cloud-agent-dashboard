@@ -64,6 +64,7 @@ services:
     environment:
       DATABASE_URL: postgres://analytics:analytics@db:5432/analytics
       WORKER_POLL_INTERVAL_MS: 2000
+      WORKER_USE_BATCH_PROCESSOR: false
       WORKER_BATCH_SIZE: 100
     depends_on:
       db:

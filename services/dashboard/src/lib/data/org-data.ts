@@ -18,7 +18,7 @@ import {
 } from "../db/queries";
 
 /**
- * Get org metrics (KPIs) for a date range.
+ * Get org metrics (KPIs) for a date range with comparison to previous period.
  */
 export async function fetchOrgMetrics(
   orgId: string,
@@ -27,12 +27,19 @@ export async function fetchOrgMetrics(
   const fromDate = new Date(timeRange.from);
   const toDate = new Date(timeRange.to);
 
-  const [metrics, p95Duration] = await Promise.all([
+  // Calculate previous period (same duration before the current period)
+  const periodMs = toDate.getTime() - fromDate.getTime();
+  const prevFromDate = new Date(fromDate.getTime() - periodMs);
+  const prevToDate = new Date(fromDate.getTime() - 1); // End 1ms before current period starts
+
+  const [metrics, p95Duration, prevMetrics, prevP95Duration] = await Promise.all([
     getOrgMetricsFromDb(orgId, fromDate, toDate),
     getP95DurationFromDb(orgId, fromDate, toDate),
+    getOrgMetricsFromDb(orgId, prevFromDate, prevToDate),
+    getP95DurationFromDb(orgId, prevFromDate, prevToDate),
   ]);
 
-  return transformOrgMetrics(metrics, p95Duration);
+  return transformOrgMetrics(metrics, p95Duration, prevMetrics, prevP95Duration);
 }
 
 /**
@@ -85,13 +92,25 @@ export async function fetchOrgFailures(
 // Transform Functions
 // ============================================================================
 
-function transformOrgMetrics(metrics: OrgMetricsResult, p95Duration: number): OrgMetricsResponse {
+/**
+ * Calculate percentage change between current and previous values.
+ */
+function calcChangePercent(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+}
+
+function transformOrgMetrics(
+  metrics: OrgMetricsResult,
+  p95Duration: number,
+  prevMetrics: OrgMetricsResult,
+  prevP95Duration: number
+): OrgMetricsResponse {
+  // Current period calculations
   const totalRuns = metrics.totalRuns;
   const successRate = totalRuns > 0 ? (metrics.successRuns / totalRuns) * 100 : 0;
   const avgDurationMs = totalRuns > 0 ? metrics.totalDurationMs / totalRuns : 0;
   const totalTokens = metrics.totalInputTokens + metrics.totalOutputTokens;
-
-  // Calculate friction metrics
   const sessionsCount = metrics.sessionsCount;
   const avgRunsPerSession = sessionsCount > 0 ? totalRuns / sessionsCount : 0;
   const handoffRate = sessionsCount > 0 ? (metrics.sessionsWithHandoff / sessionsCount) * 100 : 0;
@@ -99,70 +118,105 @@ function transformOrgMetrics(metrics: OrgMetricsResult, p95Duration: number): Or
     metrics.sessionsWithHandoff > 0
       ? (metrics.sessionsWithPostHandoff / metrics.sessionsWithHandoff) * 100
       : 0;
+  const avgActiveTimeMs = metrics.avgActiveTimeMs;
+  const avgLifespanMs = metrics.avgLifespanMs;
+
+  // Previous period calculations
+  const prevTotalRuns = prevMetrics.totalRuns;
+  const prevSuccessRate = prevTotalRuns > 0 ? (prevMetrics.successRuns / prevTotalRuns) * 100 : 0;
+  const prevAvgDurationMs = prevTotalRuns > 0 ? prevMetrics.totalDurationMs / prevTotalRuns : 0;
+  const prevTotalTokens = prevMetrics.totalInputTokens + prevMetrics.totalOutputTokens;
+  const prevSessionsCount = prevMetrics.sessionsCount;
+  const prevAvgRunsPerSession = prevSessionsCount > 0 ? prevTotalRuns / prevSessionsCount : 0;
+  const prevHandoffRate = prevSessionsCount > 0 ? (prevMetrics.sessionsWithHandoff / prevSessionsCount) * 100 : 0;
+  const prevPostHandoffRate =
+    prevMetrics.sessionsWithHandoff > 0
+      ? (prevMetrics.sessionsWithPostHandoff / prevMetrics.sessionsWithHandoff) * 100
+      : 0;
+  const prevAvgActiveTimeMs = prevMetrics.avgActiveTimeMs;
+  const prevAvgLifespanMs = prevMetrics.avgLifespanMs;
 
   return {
     platform: {
       sessions: {
         current: sessionsCount,
-        previous: 0, // Would need historical comparison
-        changePercent: 0,
-        isPositive: true,
+        previous: prevSessionsCount,
+        changePercent: calcChangePercent(sessionsCount, prevSessionsCount),
+        isPositive: sessionsCount >= prevSessionsCount,
       },
       runs: {
         current: totalRuns,
-        previous: 0,
-        changePercent: 0,
-        isPositive: true,
+        previous: prevTotalRuns,
+        changePercent: calcChangePercent(totalRuns, prevTotalRuns),
+        isPositive: totalRuns >= prevTotalRuns,
+      },
+      totalRuns: {
+        current: totalRuns,
+        previous: prevTotalRuns,
+        changePercent: calcChangePercent(totalRuns, prevTotalRuns),
+        isPositive: totalRuns >= prevTotalRuns,
       },
       successRate: {
         current: Math.round(successRate * 10) / 10,
-        previous: 0,
-        changePercent: 0,
-        isPositive: true,
+        previous: Math.round(prevSuccessRate * 10) / 10,
+        changePercent: calcChangePercent(successRate, prevSuccessRate),
+        isPositive: successRate >= prevSuccessRate,
       },
       avgRunDurationMs: {
         current: Math.round(avgDurationMs),
-        previous: 0,
-        changePercent: 0,
-        isPositive: true,
+        previous: Math.round(prevAvgDurationMs),
+        changePercent: calcChangePercent(avgDurationMs, prevAvgDurationMs),
+        isPositive: avgDurationMs <= prevAvgDurationMs, // Faster is better
       },
       p95DurationMs: {
         current: Math.round(p95Duration),
-        previous: 0,
-        changePercent: 0,
-        isPositive: true,
+        previous: Math.round(prevP95Duration),
+        changePercent: calcChangePercent(p95Duration, prevP95Duration),
+        isPositive: p95Duration <= prevP95Duration, // Faster is better
       },
       totalCostCents: {
-        current: Math.round(metrics.totalCost * 100), // Convert to cents
-        previous: 0,
-        changePercent: 0,
-        isPositive: false, // Lower cost is better
+        current: Math.round(metrics.totalCost * 100),
+        previous: Math.round(prevMetrics.totalCost * 100),
+        changePercent: calcChangePercent(metrics.totalCost, prevMetrics.totalCost),
+        isPositive: metrics.totalCost <= prevMetrics.totalCost, // Lower cost is better
       },
       totalTokens: {
         current: totalTokens,
-        previous: 0,
-        changePercent: 0,
-        isPositive: true,
+        previous: prevTotalTokens,
+        changePercent: calcChangePercent(totalTokens, prevTotalTokens),
+        isPositive: true, // Neutral - just informational
       },
     },
     friction: {
       avgRunsPerSession: {
         current: Math.round(avgRunsPerSession * 10) / 10,
-        previous: 0,
-        changePercent: 0,
-        isPositive: false, // Fewer runs per session is better
+        previous: Math.round(prevAvgRunsPerSession * 10) / 10,
+        changePercent: calcChangePercent(avgRunsPerSession, prevAvgRunsPerSession),
+        isPositive: avgRunsPerSession <= prevAvgRunsPerSession, // Fewer runs is better
+      },
+      avgActiveTimeMs: {
+        current: Math.round(avgActiveTimeMs),
+        previous: Math.round(prevAvgActiveTimeMs),
+        changePercent: calcChangePercent(avgActiveTimeMs, prevAvgActiveTimeMs),
+        isPositive: true, // Neutral - just informational
+      },
+      avgLifespanMs: {
+        current: Math.round(avgLifespanMs),
+        previous: Math.round(prevAvgLifespanMs),
+        changePercent: calcChangePercent(avgLifespanMs, prevAvgLifespanMs),
+        isPositive: true, // Neutral - just informational
       },
       localHandoffRate: {
         current: Math.round(handoffRate * 10) / 10,
-        previous: 0,
-        changePercent: 0,
-        isPositive: false, // Lower handoff rate is better
+        previous: Math.round(prevHandoffRate * 10) / 10,
+        changePercent: calcChangePercent(handoffRate, prevHandoffRate),
+        isPositive: handoffRate <= prevHandoffRate, // Lower is better
       },
       postHandoffIterationRate: {
         current: Math.round(postHandoffRate * 10) / 10,
-        previous: 0,
-        changePercent: 0,
-        isPositive: false, // Lower is better
+        previous: Math.round(prevPostHandoffRate * 10) / 10,
+        changePercent: calcChangePercent(postHandoffRate, prevPostHandoffRate),
+        isPositive: postHandoffRate <= prevPostHandoffRate, // Lower is better
       },
     },
   };
@@ -196,14 +250,14 @@ function transformOrgTrends(trends: OrgDailyTrend[]): OrgTrendsResponse {
 
   const tokens: TimeSeriesPoint[] = trends.map((t) => ({
     date: t.day,
-    value: 0, // Would need token data in trends
+    value: t.inputTokens + t.outputTokens,
   }));
 
   const friction: MultiSeriesPoint[] = trends.map((t) => ({
     date: t.day,
     avgRunsPerSession: t.sessions > 0 ? Math.round((t.runs / t.sessions) * 10) / 10 : 0,
-    handoffRate: 0, // Would need handoff data per day
-    postHandoffRate: 0,
+    handoffRate: t.sessions > 0 ? Math.round((t.sessionsWithHandoff / t.sessions) * 100 * 10) / 10 : 0,
+    postHandoffRate: t.sessionsWithHandoff > 0 ? Math.round((t.sessionsWithPostHandoff / t.sessionsWithHandoff) * 100 * 10) / 10 : 0,
   }));
 
   const reliability: TimeSeriesPoint[] = trends.map((t) => ({
@@ -211,10 +265,14 @@ function transformOrgTrends(trends: OrgDailyTrend[]): OrgTrendsResponse {
     value: Math.round(t.successRate * 10) / 10,
   }));
 
+  // Reliability breakdown with error categories for stacked bar chart
+  // Categories match FailureCategory: tool_error, model_error, timeout, unknown
   const reliabilityBreakdown: MultiSeriesPoint[] = trends.map((t) => ({
     date: t.day,
-    succeeded: t.runs > 0 ? Math.round((t.successRate / 100) * t.runs) : 0,
-    failed: t.runs > 0 ? t.runs - Math.round((t.successRate / 100) * t.runs) : 0,
+    tool_error: t.errorsTool,
+    model_error: t.errorsModel,
+    timeout: t.errorsTimeout,
+    unknown: t.errorsOther,
   }));
 
   return {

@@ -27,34 +27,32 @@ interface ReliabilitySectionProps {
   className?: string;
 }
 
+// Chart config matches FailureCategory: tool_error, model_error, timeout, unknown
 const chartConfig: ChartConfig = {
-  errors: {
-    label: "Errors",
+  tool_error: {
+    label: "Tool Error",
     color: "var(--chart-1)", // red-ish
   },
-  timeouts: {
-    label: "Timeouts",
+  model_error: {
+    label: "Model Error",
+    color: "var(--chart-2)", // blue-ish
+  },
+  timeout: {
+    label: "Timeout",
     color: "var(--chart-4)", // orange-ish
   },
-  cancels: {
-    label: "Cancels",
+  unknown: {
+    label: "Unknown",
     color: "var(--chart-5)", // gray-ish
   },
 };
 
+// Labels for FailureCategory values in the breakdown table
 const failureCategoryLabels: Record<string, string> = {
-  timeout: "Timeout",
   tool_error: "Tool Error",
   model_error: "Model Error",
+  timeout: "Timeout",
   unknown: "Unknown",
-  // Legacy uppercase values for backwards compatibility
-  TIMEOUT: "Timeout",
-  RATE_LIMIT: "Rate Limit",
-  CONTEXT_LENGTH: "Context Length",
-  TOOL_ERROR: "Tool Error",
-  VALIDATION_ERROR: "Validation Error",
-  INTERNAL_ERROR: "Internal Error",
-  USER_CANCELED: "User Canceled",
 };
 
 export function ReliabilitySection({ reliabilityBreakdown, failures, className }: ReliabilitySectionProps) {
@@ -99,9 +97,10 @@ export function ReliabilitySection({ reliabilityBreakdown, failures, className }
               }
             />
             <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="errors" stackId="a" fill="var(--color-errors)" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="timeouts" stackId="a" fill="var(--color-timeouts)" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="cancels" stackId="a" fill="var(--color-cancels)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="tool_error" stackId="a" fill="var(--color-tool_error)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="model_error" stackId="a" fill="var(--color-model_error)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="timeout" stackId="a" fill="var(--color-timeout)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="unknown" stackId="a" fill="var(--color-unknown)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ChartContainer>
 

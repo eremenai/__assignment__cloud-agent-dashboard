@@ -10,6 +10,8 @@ import Link from "next/link";
 
 import { ChevronRight, HelpCircle } from "lucide-react";
 
+import { useTimeRangeLink } from "@/components/layout/time-range-selector";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +31,7 @@ type SortOption = "cost" | "runs" | "sessions" | "handoff";
 
 export function TopUsersTable({ users, className }: TopUsersTableProps) {
   const [sortBy, setSortBy] = useState<SortOption>("cost");
+  const getTimeRangeLink = useTimeRangeLink();
 
   const sortedUsers = useMemo(() => {
     const sorted = [...users];
@@ -69,7 +72,7 @@ export function TopUsersTable({ users, className }: TopUsersTableProps) {
             </SelectContent>
           </Select>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/users">
+            <Link href={getTimeRangeLink("/users")}>
               View all <ChevronRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
@@ -160,7 +163,7 @@ export function TopUsersTable({ users, className }: TopUsersTableProps) {
               sortedUsers.map((user) => (
                 <TableRow key={user.userId} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
-                    <Link href={`/users/${user.userId}`} className="flex items-center gap-2 hover:underline">
+                    <Link href={getTimeRangeLink(`/users/${user.userId}`)} className="flex items-center gap-2 hover:underline">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.avatarUrl} alt={user.name ?? user.displayName ?? ""} />
                         <AvatarFallback className="text-xs">{getInitials(user.name ?? user.displayName ?? "")}</AvatarFallback>

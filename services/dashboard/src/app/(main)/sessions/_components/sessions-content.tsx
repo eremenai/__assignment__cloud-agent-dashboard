@@ -4,7 +4,7 @@
  * Sessions content with self-contained data fetching.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TableSkeleton } from "@/components/analytics";
 import { useTimeRangeParams } from "@/components/layout/time-range-selector";
@@ -22,8 +22,11 @@ export function SessionsContent() {
   const { user, currentOrgId, can } = useAuth();
   const { from, to } = useTimeRangeParams();
 
-  const [isLoading, setIsLoading] = useState(true);
+  // Separate initial loading (first load) from table loading (subsequent fetches)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [response, setResponse] = useState<SessionsListResponse | null>(null);
+  const isFirstLoad = useRef(true);
 
   // Filter state
   const [filters, setFilters] = useState<Partial<SessionFilters>>({});
@@ -38,30 +41,53 @@ export function SessionsContent() {
   // Fetch sessions
   useEffect(() => {
     if (!orgId) {
-      setIsLoading(false);
+      setIsInitialLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    // Use table loading for subsequent fetches
+    if (isFirstLoad.current) {
+      setIsInitialLoading(true);
+    } else {
+      setIsTableLoading(true);
+    }
+
     const timeRange = { from, to };
 
-    fetchSessionsList(orgId, timeRange, { page, pageSize }, { sortBy, sortOrder })
+    fetchSessionsList(
+      orgId,
+      timeRange,
+      { page, pageSize },
+      { sortBy, sortOrder },
+      {
+        search: filters.search,
+        status: filters.status,
+        durationRange: filters.durationRange,
+        costRange: filters.costRange,
+        hasHandoff: filters.hasHandoff,
+        hasPostHandoffIteration: filters.hasPostHandoffIteration,
+      }
+    )
       .then((sessionsData) => {
         // Filter to only user's sessions if they can't view all
         if (!canViewAllSessions && user) {
-          sessionsData.data = sessionsData.data.filter((s) => s.createdByUserId === user.userId);
+          sessionsData.data = sessionsData.data.filter((s) => s.userId === user.userId);
           sessionsData.pagination.totalItems = sessionsData.data.length;
           sessionsData.pagination.totalPages = Math.ceil(sessionsData.data.length / pageSize);
         }
 
         setResponse(sessionsData);
-        setIsLoading(false);
+        setIsInitialLoading(false);
+        setIsTableLoading(false);
+        isFirstLoad.current = false;
       })
       .catch((error) => {
         console.error("Failed to fetch sessions:", error);
-        setIsLoading(false);
+        setIsInitialLoading(false);
+        setIsTableLoading(false);
+        isFirstLoad.current = false;
       });
-  }, [orgId, from, to, page, pageSize, sortBy, sortOrder, canViewAllSessions, user]);
+  }, [orgId, from, to, page, pageSize, sortBy, sortOrder, filters, canViewAllSessions, user]);
 
   // Handle filter changes
   const handleFilterChange = useCallback((key: string, value: string) => {
@@ -103,8 +129,8 @@ export function SessionsContent() {
     setPage(1);
   }, []);
 
-  // Render loading skeletons
-  if (isLoading) {
+  // Initial loading - show full skeleton
+  if (isInitialLoading) {
     return (
       <>
         {/* Filters skeleton */}
@@ -158,19 +184,29 @@ export function SessionsContent() {
         />
       )}
 
-      {/* Table */}
-      {response && (
-        <SessionsTable
-          sessions={response.data}
-          pagination={response.pagination}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          showCreatedBy={canViewAllSessions}
-        />
-      )}
+      {/* Table - show loading overlay when fetching */}
+      <div className="relative">
+        {isTableLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span className="text-sm">Loading...</span>
+            </div>
+          </div>
+        )}
+        {response && (
+          <SessionsTable
+            sessions={response.data}
+            pagination={response.pagination}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            showCreatedBy={canViewAllSessions}
+          />
+        )}
+      </div>
     </>
   );
 }

@@ -4,15 +4,51 @@
  * Sessions List Page - Filterable, sortable list of all sessions.
  *
  * Data fetching is handled by SessionsContent component.
+ * SessionsContent uses useTimeRangeParams which requires a Suspense boundary.
  */
+
+import { Suspense } from "react";
 
 import { Download } from "lucide-react";
 
-import { EmptyState } from "@/components/analytics";
+import { EmptyState, TableSkeleton } from "@/components/analytics";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 
 import { SessionsContent } from "./_components/sessions-content";
+
+function SessionsContentFallback() {
+  return (
+    <>
+      {/* Filters skeleton */}
+      <div className="flex gap-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      {/* Summary skeleton */}
+      <div className="grid gap-4 md:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Card key={`summary-${i}`}>
+            <CardContent className="p-4">
+              <Skeleton className="mb-2 h-4 w-20" />
+              <Skeleton className="h-6 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Table skeleton */}
+      <Card>
+        <CardContent className="pt-6">
+          <TableSkeleton rows={10} columns={8} />
+        </CardContent>
+      </Card>
+    </>
+  );
+}
 
 export default function SessionsListPage() {
   const { user, currentOrgId, isLoading: authLoading } = useAuth();
@@ -46,7 +82,9 @@ export default function SessionsListPage() {
       </div>
 
       {/* Content with data fetching */}
-      <SessionsContent />
+      <Suspense fallback={<SessionsContentFallback />}>
+        <SessionsContent />
+      </Suspense>
     </div>
   );
 }

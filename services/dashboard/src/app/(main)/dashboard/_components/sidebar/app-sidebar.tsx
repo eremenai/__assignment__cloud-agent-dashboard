@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 
 import Link from "next/link";
 
@@ -110,10 +110,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={filteredItems} />
+        <Suspense fallback={null}>
+          <NavMain items={filteredItems} />
+        </Suspense>
       </SidebarContent>
       <SidebarFooter>
-        <DevAuthSwitcher />
+        {process.env.NODE_ENV !== "production" && <DevAuthSwitcher />}
       </SidebarFooter>
     </Sidebar>
   );

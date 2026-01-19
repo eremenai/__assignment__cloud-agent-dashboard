@@ -11,6 +11,7 @@ import Link from "next/link";
 import { ChevronRight, HelpCircle } from "lucide-react";
 
 import { StatusBadge } from "@/components/analytics";
+import { useTimeRangeLink } from "@/components/layout/time-range-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +36,7 @@ type SortOption = "cost" | "runs" | "lifespan" | "failures";
 
 export function TopSessionsTable({ sessions, className }: TopSessionsTableProps) {
   const [sortBy, setSortBy] = useState<SortOption>("cost");
+  const getTimeRangeLink = useTimeRangeLink();
 
   const sortedSessions = useMemo(() => {
     const sorted = [...sessions];
@@ -75,7 +77,7 @@ export function TopSessionsTable({ sessions, className }: TopSessionsTableProps)
             </SelectContent>
           </Select>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/sessions">
+            <Link href={getTimeRangeLink("/sessions")}>
               View all <ChevronRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
@@ -177,7 +179,7 @@ export function TopSessionsTable({ sessions, className }: TopSessionsTableProps)
                 <TableRow key={session.sessionId} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
                     <Link
-                      href={`/sessions/${session.sessionId}`}
+                      href={getTimeRangeLink(`/sessions/${session.sessionId}`)}
                       className="font-mono text-primary text-sm hover:underline"
                     >
                       {formatSessionId(session.sessionId)}

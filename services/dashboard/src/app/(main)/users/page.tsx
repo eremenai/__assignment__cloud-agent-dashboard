@@ -4,12 +4,47 @@
  * Users List Page - View and compare users within the organization.
  *
  * Data fetching is handled by UsersContent component.
+ * UsersContent uses useTimeRangeParams which requires a Suspense boundary.
  */
 
-import { EmptyState } from "@/components/analytics";
+import { Suspense } from "react";
+
+import { EmptyState, TableSkeleton } from "@/components/analytics";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 
 import { UsersContent } from "./_components/users-content";
+
+function UsersContentFallback() {
+  return (
+    <>
+      {/* Filters skeleton */}
+      <div className="flex gap-4">
+        <Skeleton className="h-10 w-64" />
+      </div>
+
+      {/* Summary skeleton */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={`summary-${i}`}>
+            <CardContent className="p-4">
+              <Skeleton className="mb-2 h-4 w-20" />
+              <Skeleton className="h-6 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Table skeleton */}
+      <Card>
+        <CardContent className="pt-6">
+          <TableSkeleton rows={10} columns={10} />
+        </CardContent>
+      </Card>
+    </>
+  );
+}
 
 export default function UsersPage() {
   const { can } = useAuth();
@@ -42,7 +77,9 @@ export default function UsersPage() {
       </div>
 
       {/* Content with data fetching */}
-      <UsersContent />
+      <Suspense fallback={<UsersContentFallback />}>
+        <UsersContent />
+      </Suspense>
     </div>
   );
 }

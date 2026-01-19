@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
 
 import { EmptyState, StatusBadge } from "@/components/analytics";
+import { useTimeRangeLink } from "@/components/layout/time-range-selector";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,9 +60,10 @@ export function SessionsTable({
   showCreatedBy = true,
 }: SessionsTableProps) {
   const router = useRouter();
+  const getTimeRangeLink = useTimeRangeLink();
 
   const handleRowClick = (sessionId: string) => {
-    router.push(`/sessions/${sessionId}`);
+    router.push(getTimeRangeLink(`/sessions/${sessionId}`));
   };
 
   const renderSortableHeader = (column: string, label: string) => {
@@ -116,7 +118,7 @@ export function SessionsTable({
               >
                 <TableCell>
                   <Link
-                    href={`/sessions/${session.sessionId}`}
+                    href={getTimeRangeLink(`/sessions/${session.sessionId}`)}
                     className="font-mono text-primary text-sm hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -145,11 +147,13 @@ export function SessionsTable({
                 <TableCell className="text-right">{session.localHandoffCount ?? session.handoffCount ?? 0}</TableCell>
                 <TableCell>
                   {session.hasPostHandoffIteration ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (session.localHandoffCount ?? session.handoffCount ?? 0) > 0 ? (
-                    <X className="h-4 w-4 text-muted-foreground" />
+                    <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                      <Check className="h-3 w-3" /> Yes
+                    </span>
                   ) : (
-                    <span className="text-muted-foreground">-</span>
+                    <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
+                      <X className="h-3 w-3" /> No
+                    </span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">

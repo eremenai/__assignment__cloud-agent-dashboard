@@ -4,7 +4,7 @@
  * Users content with self-contained data fetching.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TableSkeleton } from "@/components/analytics";
 import { useTimeRangeParams } from "@/components/layout/time-range-selector";
@@ -47,9 +47,11 @@ export function UsersContent() {
     sortOrder: "desc",
   });
 
-  // Data state
-  const [isLoading, setIsLoading] = useState(true);
+  // Data state - separate initial loading from table loading
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [data, setData] = useState<UsersPageData | null>(null);
+  const isFirstLoad = useRef(true);
 
   // Reset page when search changes - note: search filtering is client-side only
   const handleSearchChange = useCallback((value: string) => {
@@ -60,23 +62,33 @@ export function UsersContent() {
   // Fetch data
   useEffect(() => {
     if (!currentOrgId) {
-      setIsLoading(false);
+      setIsInitialLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    // Use table loading for subsequent fetches
+    if (isFirstLoad.current) {
+      setIsInitialLoading(true);
+    } else {
+      setIsTableLoading(true);
+    }
+
     const timeRange = { from, to };
 
-    fetchUsersList(currentOrgId, timeRange, { page, pageSize }, sort)
+    fetchUsersList(currentOrgId, timeRange, { page, pageSize }, sort, { search })
       .then((result) => {
         setData(result);
-        setIsLoading(false);
+        setIsInitialLoading(false);
+        setIsTableLoading(false);
+        isFirstLoad.current = false;
       })
       .catch((error) => {
         console.error("Failed to fetch users:", error);
-        setIsLoading(false);
+        setIsInitialLoading(false);
+        setIsTableLoading(false);
+        isFirstLoad.current = false;
       });
-  }, [currentOrgId, from, to, page, pageSize, sort]);
+  }, [currentOrgId, from, to, page, pageSize, sort, search]);
 
   const handleSortChange = useCallback((column: string) => {
     setSort((prev) => ({
@@ -85,8 +97,8 @@ export function UsersContent() {
     }));
   }, []);
 
-  // Loading state
-  if (isLoading) {
+  // Initial loading - show full skeleton
+  if (isInitialLoading) {
     return (
       <>
         {/* Filters skeleton */}
@@ -132,16 +144,26 @@ export function UsersContent() {
         />
       )}
 
-      {/* Table */}
-      {data && (
-        <UsersTable
-          users={data.data}
-          pagination={data.pagination}
-          sort={sort}
-          onPageChange={setPage}
-          onSortChange={handleSortChange}
-        />
-      )}
+      {/* Table - show loading overlay when fetching */}
+      <div className="relative">
+        {isTableLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span className="text-sm">Loading...</span>
+            </div>
+          </div>
+        )}
+        {data && (
+          <UsersTable
+            users={data.data}
+            pagination={data.pagination}
+            sort={sort}
+            onPageChange={setPage}
+            onSortChange={handleSortChange}
+          />
+        )}
+      </div>
     </>
   );
 }

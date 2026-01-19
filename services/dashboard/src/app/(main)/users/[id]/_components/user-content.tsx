@@ -50,13 +50,15 @@ export function UserContent({ userId }: UserContentProps) {
 
     Promise.all([
       fetchUserDetail(orgId, userId, timeRange),
-      fetchSessionsList(orgId, timeRange, { page: 1, pageSize: 10 }, { sortBy: "createdAt", sortOrder: "desc" }),
+      fetchSessionsList(orgId, timeRange, { page: 1, pageSize: 100 }, { sortBy: "createdAt", sortOrder: "desc" }),
     ])
       .then(([userDetail, sessionsResponse]) => {
         setData(userDetail);
-        // Filter sessions to this user
-        const userSessions = sessionsResponse.data.filter((s) => s.createdByUserId === userId);
-        setSessions(userSessions);
+        // Filter sessions to this user (check both userId and createdByUserId for compatibility)
+        const userSessions = sessionsResponse.data.filter(
+          (s) => s.userId === userId || s.createdByUser?.userId === userId
+        );
+        setSessions(userSessions.slice(0, 10));
         setIsLoading(false);
 
         // Set breadcrumb metadata with user name

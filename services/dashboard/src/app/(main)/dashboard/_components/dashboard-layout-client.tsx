@@ -5,9 +5,10 @@
  * Provides AuthProvider, BreadcrumbsProvider, and client-side header components.
  */
 
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { BreadcrumbsProvider, OrgSelector, TimeRangeSelector } from "@/components/layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AuthProvider } from "@/lib/auth";
 import type { AuthUser } from "@/lib/types/auth";
 
@@ -30,12 +31,15 @@ export function DashboardLayoutClient({ children, initialUser }: DashboardLayout
 
 /**
  * Header controls section with time range, theme, and user dropdown.
+ * TimeRangeSelector uses useSearchParams which requires a Suspense boundary.
  */
 export function HeaderControls() {
   return (
     <div className="flex items-center gap-2">
       <OrgSelector />
-      <TimeRangeSelector />
+      <Suspense fallback={<Skeleton className="h-9 w-32" />}>
+        <TimeRangeSelector />
+      </Suspense>
       <ThemeSwitcher />
       <HeaderUser />
     </div>

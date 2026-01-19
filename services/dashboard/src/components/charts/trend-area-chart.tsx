@@ -5,7 +5,7 @@
  * Based on chart-area-interactive.tsx pattern.
  */
 
-import { HelpCircle } from "lucide-react";
+import { BarChart3, HelpCircle } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +68,8 @@ export function TrendAreaChart({
   const _primaryKeys = dataKeys.filter((key) => !secondaryAxisKeys.includes(key));
   const _secondaryKeys = dataKeys.filter((key) => secondaryAxisKeys.includes(key));
 
+  const isEmpty = data.length === 0;
+
   return (
     <Card className={className}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
@@ -92,6 +94,15 @@ export function TrendAreaChart({
         {headerExtra}
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center text-center" style={{ height }}>
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+              <BarChart3 className="size-5 text-muted-foreground" />
+            </div>
+            <p className="mt-3 font-medium text-muted-foreground text-sm">No data available</p>
+            <p className="mt-1 text-muted-foreground/70 text-xs">Data will appear here once available</p>
+          </div>
+        ) : (
         <ChartContainer config={config} className="w-full" style={{ height }}>
           <AreaChart data={data}>
             <defs>
@@ -186,6 +197,7 @@ export function TrendAreaChart({
             ))}
           </AreaChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

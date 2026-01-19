@@ -116,3 +116,35 @@ export function PageHeaderSkeleton() {
     </div>
   );
 }
+
+interface KPISkeletonProps {
+  /** Number of rows of KPI cards */
+  rows?: number;
+  /** Number of cards per row */
+  cardsPerRow?: number;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+/**
+ * Skeleton for a grid of KPI cards.
+ */
+export function KPISkeleton({ rows = 1, cardsPerRow = 5, className }: KPISkeletonProps) {
+  return (
+    <div className={cn("space-y-4", className)}>
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton elements never reorder
+          key={`kpi-row-${rowIndex}`}
+          className="grid gap-4"
+          style={{ gridTemplateColumns: `repeat(${cardsPerRow}, 1fr)` }}
+        >
+          {Array.from({ length: cardsPerRow }).map((_, colIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton elements never reorder
+            <KPICardSkeleton key={`kpi-card-${rowIndex}-${colIndex}`} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
