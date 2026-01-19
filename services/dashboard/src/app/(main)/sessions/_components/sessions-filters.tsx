@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { Check, ChevronDown, Search, Users, X } from "lucide-react";
+import { ChevronDown, Search, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -106,12 +106,10 @@ export function SessionsFilters({
           <PopoverContent className="w-[240px] p-0" align="start">
             <div className="max-h-[300px] overflow-auto">
               {/* Select All option */}
-              <div
-                className="flex cursor-pointer items-center gap-2 border-b px-3 py-2 hover:bg-muted/50"
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 border-b px-3 py-2 hover:bg-muted/50"
                 onClick={handleSelectAllUsers}
-                onKeyDown={(e) => e.key === "Enter" && handleSelectAllUsers()}
-                role="button"
-                tabIndex={0}
               >
                 <Checkbox
                   checked={selectedUserIds.length === users.length && users.length > 0}
@@ -120,29 +118,27 @@ export function SessionsFilters({
                 <span className="font-medium text-sm">
                   {selectedUserIds.length === users.length ? "Deselect All" : "Select All"}
                 </span>
-              </div>
+              </button>
 
               {/* User list */}
               {users.map((user) => (
-                <div
+                <button
+                  type="button"
                   key={user.userId}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/50"
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/50"
                   onClick={() => handleUserToggle(user.userId)}
-                  onKeyDown={(e) => e.key === "Enter" && handleUserToggle(user.userId)}
-                  role="button"
-                  tabIndex={0}
                 >
                   <Checkbox
                     checked={selectedUserIds.includes(user.userId)}
                     className="pointer-events-none"
                   />
-                  <div className="flex flex-col overflow-hidden">
+                  <div className="flex flex-col overflow-hidden text-left">
                     <span className="truncate text-sm">{user.name}</span>
                     {user.email && user.email !== user.name && (
                       <span className="truncate text-muted-foreground text-xs">{user.email}</span>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </PopoverContent>

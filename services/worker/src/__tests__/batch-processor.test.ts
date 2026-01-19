@@ -171,7 +171,7 @@ describe("BatchProcessor", () => {
 
     it("returns full event data including payload", async () => {
       const eventWithPayload = createEvent("org-1", "evt-1", "user-1", "run_completed", "run-1");
-      eventWithPayload.payload = { status: "success", cost: 0.01 };
+      eventWithPayload.payload = { status: "success", duration_ms: 1000, cost: 0.01, input_tokens: 100, output_tokens: 50 };
 
       mockExecute.mockResolvedValueOnce([eventWithPayload]);
 

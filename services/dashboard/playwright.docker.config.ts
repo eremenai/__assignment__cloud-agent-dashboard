@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import path from "path";
+import path from "node:path";
 
 const AUTH_FILE = path.join(__dirname, "playwright/.auth/user.json");
 

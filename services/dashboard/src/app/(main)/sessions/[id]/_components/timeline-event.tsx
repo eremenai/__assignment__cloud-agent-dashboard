@@ -111,7 +111,7 @@ function RunEndDetailsFromPayload({
 export function TimelineEvent({
   event,
   runs,
-  handoffs,
+  handoffs: _handoffs,
   isHighlighted,
   onHighlightComplete,
   isLast,

@@ -31,7 +31,7 @@
  */
 
 import type { getDb } from "@repo/shared/db/client";
-import { eventsRaw } from "@repo/shared/db/schema";
+import type { eventsRaw } from "@repo/shared/db/schema";
 import type { EventType } from "@repo/shared/types";
 import { sql } from "drizzle-orm";
 import { projectLocalHandoff } from "./projectors/handoff.js";
@@ -178,7 +178,7 @@ export class BatchProcessor {
       if (!groups.has(key)) {
         groups.set(key, []);
       }
-      groups.get(key)!.push(event);
+      groups.get(key)?.push(event);
     }
 
     return Array.from(groups.entries()).map(([userId, events]) => ({

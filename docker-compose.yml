@@ -95,8 +95,8 @@ services:
       dockerfile: tools/generator/Dockerfile
     environment:
       INGEST_URL: http://ingest:3001/events
-    # Default: generate 1 year of data. Override with: docker compose run generator --days 30
-    command: ["--days", "365"]
+    # Default: generate 90 days of data. Override with: docker compose run generator --days 30
+    command: ["--days", "90"]
     depends_on:
       - ingest
     profiles:
