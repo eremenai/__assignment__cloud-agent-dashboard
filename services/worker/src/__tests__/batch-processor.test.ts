@@ -2,12 +2,12 @@
  * Tests for the batch event processor.
  *
  * These tests verify:
- * - Batch processing with per-user transactions
- * - Event grouping by user_id
- * - Fetch and lock events INSIDE transaction
+ * - Batch claiming with full event data in single query
+ * - Event grouping by user_id in memory
+ * - Per-user transaction processing with lock acquisition
  * - SAVEPOINT creation and rollback on failure
- * - Lock acquisition per user group
- * - Batch status updates outside transactions
+ * - Queue status updates inside transactions
+ * - Remaining events logging after each batch
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -61,6 +61,7 @@ describe("BatchProcessor", () => {
 
   describe("processNextBatch", () => {
     it("returns zeros when queue is empty", async () => {
+      // Claim returns empty
       mockExecute.mockResolvedValueOnce([]);
 
       const result = await processor.processNextBatch();
@@ -70,29 +71,22 @@ describe("BatchProcessor", () => {
     });
 
     it("processes events grouped by user in separate transactions", async () => {
-      // 1. Claim events
+      // 1. Claim batch with full event data
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-1", event_id: "evt-2" },
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+        createEvent("org-1", "evt-2", "user-1", "run_started", "run-1"),
       ]);
 
-      // 2. Fetch user_ids for grouping
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-1" },
-        { event_id: "evt-2", org_id: "org-1", user_id: "user-1" },
-      ]);
-
-      // 3. Transaction fetches and processes
+      // 2. Transaction processes events
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([
-          createEvent("evt-1", "message_created"),
-          createEvent("evt-2", "run_started", "run-1"),
-        ]);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      // 4. Status update
-      mockExecute.mockResolvedValueOnce([]);
+      // 3. Log remaining events
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       const result = await processor.processNextBatch();
 
@@ -102,31 +96,20 @@ describe("BatchProcessor", () => {
     });
 
     it("creates separate transactions for different users", async () => {
-      // 1. Claim events
+      // Claim batch - two different users
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-1", event_id: "evt-2" },
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+        createEvent("org-1", "evt-2", "user-2", "message_created"),
       ]);
 
-      // 2. Fetch user_ids - two different users
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-1" },
-        { event_id: "evt-2", org_id: "org-1", user_id: "user-2" },
-      ]);
-
-      // 3. Transactions for each user
-      let txCallCount = 0;
       mockTransaction.mockImplementation(async (fn) => {
-        txCallCount++;
-        const event = txCallCount === 1
-          ? createEventWithUser("org-1", "evt-1", "user-1", "message_created")
-          : createEventWithUser("org-1", "evt-2", "user-2", "message_created");
-        const mockTx = createMockTxWithEvents([event]);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      // 4. Status update
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       const result = await processor.processNextBatch();
 
@@ -140,7 +123,6 @@ describe("BatchProcessor", () => {
 
       await processor.processNextBatch();
 
-      expect(mockExecute).toHaveBeenCalled();
       const sqlCall = mockExecute.mock.calls[0][0];
       expect(sqlCall.strings.join("")).toContain("FOR UPDATE SKIP LOCKED");
     });
@@ -153,69 +135,82 @@ describe("BatchProcessor", () => {
       const sqlCall = mockExecute.mock.calls[0][0];
       expect(sqlCall.strings.join("")).toContain("attempts = attempts + 1");
     });
-  });
 
-  describe("fetch inside transaction", () => {
-    it("fetches and locks events inside transaction with FOR UPDATE SKIP LOCKED", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+    it("logs remaining events after processing", async () => {
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
-      const txExecuteCalls: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = {
-          execute: vi.fn().mockImplementation((sql) => {
-            const sqlStr = sql?.strings?.join("") ?? sql?.raw ?? "";
-            txExecuteCalls.push(sqlStr);
-            // First call in tx is fetch events
-            if (sqlStr.includes("SELECT *") && sqlStr.includes("event_id IN")) {
-              return Promise.resolve([createEvent("evt-1", "message_created")]);
-            }
-            return Promise.resolve([]);
-          }),
-        };
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "42" }]);
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
-      // Transaction should have fetch with FOR UPDATE SKIP LOCKED
-      expect(txExecuteCalls.some((q) => q.includes("FOR UPDATE SKIP LOCKED"))).toBe(true);
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Events remaining in queue: 42"));
+    });
+  });
+
+  describe("claim batch query", () => {
+    it("joins events_queue with events_raw to get full event data", async () => {
+      mockExecute.mockResolvedValueOnce([]);
+
+      await processor.processNextBatch();
+
+      const sqlCall = mockExecute.mock.calls[0][0];
+      const query = sqlCall.strings.join("");
+      expect(query).toContain("events_queue");
+      expect(query).toContain("events_raw");
+      expect(query).toContain("INNER JOIN");
     });
 
-    it("skips processing when all events are locked by another worker", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+    it("returns full event data including payload", async () => {
+      const eventWithPayload = createEvent("org-1", "evt-1", "user-1", "run_completed", "run-1");
+      eventWithPayload.payload = { status: "success", cost: 0.01 };
+
+      mockExecute.mockResolvedValueOnce([eventWithPayload]);
 
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = {
-          execute: vi.fn().mockResolvedValue([]), // No events - all locked
-        };
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
 
-      const result = await processor.processNextBatch();
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
-      expect(result.processed).toBe(0);
-      expect(result.failed).toBe(0);
+      const { projectRunCompleted } = await import("../projectors/run.js");
+      const mockProjectRunCompleted = projectRunCompleted as ReturnType<typeof vi.fn>;
+
+      await processor.processNextBatch();
+
+      expect(mockProjectRunCompleted).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ payload: { status: "success", cost: 0.01 } })
+      );
     });
   });
 
   describe("SAVEPOINT handling", () => {
     it("creates SAVEPOINT before processing each event", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
       const savepointCalls: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithSavepointTracking([createEvent("evt-1", "message_created")], savepointCalls);
+        const mockTx = createMockTxWithSavepointTracking(savepointCalls);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -223,16 +218,19 @@ describe("BatchProcessor", () => {
     });
 
     it("releases SAVEPOINT on success", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
       const savepointCalls: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithSavepointTracking([createEvent("evt-1", "message_created")], savepointCalls);
+        const mockTx = createMockTxWithSavepointTracking(savepointCalls);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -241,12 +239,8 @@ describe("BatchProcessor", () => {
 
     it("rolls back SAVEPOINT on failure and continues with other events", async () => {
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-1", event_id: "evt-2" },
-      ]);
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-1" },
-        { event_id: "evt-2", org_id: "org-1", user_id: "user-1" },
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+        createEvent("org-1", "evt-2", "user-1", "message_created"),
       ]);
 
       const { projectMessageCreated } = await import("../projectors/message.js");
@@ -263,16 +257,14 @@ describe("BatchProcessor", () => {
 
       const savepointCalls: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithSavepointTracking(
-          [createEvent("evt-1", "message_created"), createEvent("evt-2", "message_created")],
-          savepointCalls
-        );
+        const mockTx = createMockTxWithSavepointTracking(savepointCalls);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
 
       vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       const result = await processor.processNextBatch();
 
@@ -282,31 +274,21 @@ describe("BatchProcessor", () => {
     });
   });
 
-  describe("lock acquisition per user group", () => {
+  describe("lock acquisition", () => {
     it("acquires locks on aggregate tables for user's data", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
       const lockQueries: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = {
-          execute: vi.fn().mockImplementation((sql) => {
-            const sqlStr = sql?.strings?.join("") ?? sql?.raw ?? "";
-            // First call is fetch events
-            if (sqlStr.includes("SELECT *") && sqlStr.includes("event_id IN")) {
-              return Promise.resolve([createEvent("evt-1", "message_created")]);
-            }
-            // Track lock queries
-            if (sqlStr.includes("FOR UPDATE") && !sqlStr.includes("SKIP LOCKED")) {
-              lockQueries.push(sqlStr);
-            }
-            return Promise.resolve([]);
-          }),
-        };
+        const mockTx = createMockTxWithLockTracking(lockQueries);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -316,101 +298,114 @@ describe("BatchProcessor", () => {
     });
 
     it("acquires locks on run_facts when events have run_id", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "run_started", "run-1"),
+      ]);
 
       const lockQueries: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = {
-          execute: vi.fn().mockImplementation((sql) => {
-            const sqlStr = sql?.strings?.join("") ?? sql?.raw ?? "";
-            if (sqlStr.includes("SELECT *") && sqlStr.includes("event_id IN")) {
-              return Promise.resolve([createEvent("evt-1", "run_started", "run-1")]);
-            }
-            if (sqlStr.includes("FOR UPDATE") && !sqlStr.includes("SKIP LOCKED")) {
-              lockQueries.push(sqlStr);
-            }
-            return Promise.resolve([]);
-          }),
-        };
+        const mockTx = createMockTxWithLockTracking(lockQueries);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
       expect(lockQueries.some((q) => q.includes("run_facts"))).toBe(true);
     });
-  });
 
-  describe("batch status updates", () => {
-    it("marks processed events in batch outside transaction", async () => {
+    it("acquires locks in consistent order to prevent deadlocks", async () => {
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-1", event_id: "evt-2" },
-      ]);
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-1" },
-        { event_id: "evt-2", org_id: "org-1", user_id: "user-1" },
+        createEvent("org-1", "evt-1", "user-1", "run_completed", "run-1"),
       ]);
 
+      const lockQueries: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([
-          createEvent("evt-1", "message_created"),
-          createEvent("evt-2", "message_created"),
-        ]);
+        const mockTx = createMockTxWithLockTracking(lockQueries);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
-      // Third execute call should be the status update
-      expect(mockExecute).toHaveBeenCalledTimes(3);
-      const updateCall = mockExecute.mock.calls[2][0];
-      expect(updateCall.strings.join("")).toContain("UPDATE events_queue");
-      expect(updateCall.strings.join("")).toContain("processed_at");
+      // Lock order: org_stats_daily → user_stats_daily → session_stats → run_facts
+      const orgIndex = lockQueries.findIndex((q) => q.includes("org_stats_daily"));
+      const userIndex = lockQueries.findIndex((q) => q.includes("user_stats_daily"));
+      const sessionIndex = lockQueries.findIndex((q) => q.includes("session_stats"));
+      const runIndex = lockQueries.findIndex((q) => q.includes("run_facts"));
+
+      expect(orgIndex).toBeLessThan(userIndex);
+      expect(userIndex).toBeLessThan(sessionIndex);
+      expect(sessionIndex).toBeLessThan(runIndex);
+    });
+  });
+
+  describe("queue status updates", () => {
+    it("marks processed events inside transaction", async () => {
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
+
+      const txQueries: string[] = [];
+      mockTransaction.mockImplementation(async (fn) => {
+        const mockTx = createMockTxWithQueryTracking(txQueries);
+        return fn(mockTx);
+      });
+
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await processor.processNextBatch();
+
+      expect(txQueries.some((q) => q.includes("UPDATE events_queue") && q.includes("processed_at"))).toBe(true);
     });
 
-    it("records errors for failed events", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+    it("records errors for failed events inside transaction", async () => {
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
       const { projectMessageCreated } = await import("../projectors/message.js");
       (projectMessageCreated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("Test error"));
 
+      const txQueries: string[] = [];
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([createEvent("evt-1", "message_created")]);
+        const mockTx = createMockTxWithQueryTracking(txQueries);
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
 
       vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
-      // Should have an update call with last_error
-      const updateCalls = mockExecute.mock.calls.filter((call) =>
-        call[0]?.strings?.join("").includes("last_error")
-      );
-      expect(updateCalls.length).toBeGreaterThan(0);
+      expect(txQueries.some((q) => q.includes("last_error"))).toBe(true);
     });
   });
 
   describe("event routing", () => {
     it("routes message_created to message projector", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([createEvent("evt-1", "message_created")]);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -418,16 +413,39 @@ describe("BatchProcessor", () => {
       expect(projectMessageCreated).toHaveBeenCalled();
     });
 
-    it("routes run_completed to run projector", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+    it("routes run_started to run projector", async () => {
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "run_started", "run-1"),
+      ]);
 
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([createEvent("evt-1", "run_completed", "run-1")]);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await processor.processNextBatch();
+
+      const { projectRunStarted } = await import("../projectors/run.js");
+      expect(projectRunStarted).toHaveBeenCalled();
+    });
+
+    it("routes run_completed to run projector", async () => {
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "run_completed", "run-1"),
+      ]);
+
+      mockTransaction.mockImplementation(async (fn) => {
+        const mockTx = createMockTx();
+        return fn(mockTx);
+      });
+
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -436,15 +454,18 @@ describe("BatchProcessor", () => {
     });
 
     it("routes local_handoff to handoff projector", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "local_handoff"),
+      ]);
 
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([createEvent("evt-1", "local_handoff")]);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -455,61 +476,66 @@ describe("BatchProcessor", () => {
 
   describe("error handling", () => {
     it("recovers from complete transaction failure", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      mockExecute.mockResolvedValueOnce([{ event_id: "evt-1", org_id: "org-1", user_id: "user-1" }]);
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
       mockTransaction.mockRejectedValueOnce(new Error("Connection lost"));
 
-      mockExecute.mockResolvedValue([]);
+      // Error recording outside tx + remaining events log
+      mockExecute.mockResolvedValue([{ remaining: "0" }]);
 
       vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       const result = await processor.processNextBatch();
 
       expect(result).toEqual({ processed: 0, failed: 1 });
     });
 
-    it("handles events not found in events_raw", async () => {
-      mockExecute.mockResolvedValueOnce([{ org_id: "org-1", event_id: "evt-1" }]);
-      // No events returned from user_id fetch
-      mockExecute.mockResolvedValueOnce([]);
+    it("records transaction failures outside transaction", async () => {
+      mockExecute.mockResolvedValueOnce([
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+      ]);
 
-      const result = await processor.processNextBatch();
+      mockTransaction.mockRejectedValueOnce(new Error("Connection lost"));
 
-      // No user groups = nothing to process
-      expect(result.processed).toBe(0);
-      expect(result.failed).toBe(0);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      mockExecute.mockResolvedValue([{ remaining: "0" }]);
+
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await processor.processNextBatch();
+
+      // Should have error recording call outside transaction
+      const errorUpdateCalls = mockExecute.mock.calls.filter((call) =>
+        call[0]?.strings?.join("").includes("last_error")
+      );
+      expect(errorUpdateCalls.length).toBeGreaterThan(0);
     });
   });
 
   describe("multi-org handling", () => {
     it("processes events from multiple orgs in same batch", async () => {
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-2", event_id: "evt-2" },
-        { org_id: "org-1", event_id: "evt-3" },
-      ]);
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-1" },
-        { event_id: "evt-2", org_id: "org-2", user_id: "user-2" },
-        { event_id: "evt-3", org_id: "org-1", user_id: "user-1" },
+        createEvent("org-1", "evt-1", "user-1", "message_created"),
+        createEvent("org-2", "evt-2", "user-2", "run_started", "run-1"),
+        createEvent("org-1", "evt-3", "user-1", "message_created"),
       ]);
 
-      let txCallCount = 0;
       mockTransaction.mockImplementation(async (fn) => {
-        txCallCount++;
-        const events = txCallCount === 1
-          ? [createEventWithOrg("org-1", "evt-1", "message_created"), createEventWithOrg("org-1", "evt-3", "message_created")]
-          : [createEventWithOrg("org-2", "evt-2", "run_started", "run-1")];
-        const mockTx = createMockTxWithEvents(events);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       const result = await processor.processNextBatch();
 
+      // Two users (user-1 and user-2) = two transactions
+      expect(mockTransaction).toHaveBeenCalledTimes(2);
       expect(result.processed).toBe(3);
       expect(result.failed).toBe(0);
     });
@@ -518,27 +544,19 @@ describe("BatchProcessor", () => {
   describe("user grouping", () => {
     it("groups events by user_id for separate transactions", async () => {
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-1", event_id: "evt-2" },
-        { org_id: "org-1", event_id: "evt-3" },
-      ]);
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-a" },
-        { event_id: "evt-2", org_id: "org-1", user_id: "user-b" },
-        { event_id: "evt-3", org_id: "org-1", user_id: "user-a" },
+        createEvent("org-1", "evt-1", "user-a", "message_created"),
+        createEvent("org-1", "evt-2", "user-b", "message_created"),
+        createEvent("org-1", "evt-3", "user-a", "message_created"),
       ]);
 
-      let txCallCount = 0;
       mockTransaction.mockImplementation(async (fn) => {
-        txCallCount++;
-        const events = txCallCount === 1
-          ? [createEventWithUser("org-1", "evt-1", "user-a", "message_created"), createEventWithUser("org-1", "evt-3", "user-a", "message_created")]
-          : [createEventWithUser("org-1", "evt-2", "user-b", "message_created")];
-        const mockTx = createMockTxWithEvents(events);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -548,20 +566,18 @@ describe("BatchProcessor", () => {
 
     it("handles events with null user_id in separate group", async () => {
       mockExecute.mockResolvedValueOnce([
-        { org_id: "org-1", event_id: "evt-1" },
-        { org_id: "org-1", event_id: "evt-2" },
-      ]);
-      mockExecute.mockResolvedValueOnce([
-        { event_id: "evt-1", org_id: "org-1", user_id: "user-a" },
-        { event_id: "evt-2", org_id: "org-1", user_id: null },
+        createEvent("org-1", "evt-1", "user-a", "message_created"),
+        createEvent("org-1", "evt-2", null, "message_created"),
       ]);
 
       mockTransaction.mockImplementation(async (fn) => {
-        const mockTx = createMockTxWithEvents([createEvent("evt-1", "message_created")]);
+        const mockTx = createMockTx();
         return fn(mockTx);
       });
 
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValueOnce([{ remaining: "0" }]);
+
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       await processor.processNextBatch();
 
@@ -573,64 +589,62 @@ describe("BatchProcessor", () => {
 
 // Helper functions to create mock data
 
-function createEvent(eventId: string, eventType: string, runId?: string) {
-  return createEventWithOrg("org-1", eventId, eventType, runId);
-}
-
-function createEventWithOrg(orgId: string, eventId: string, eventType: string, runId?: string) {
+function createEvent(
+  orgId: string,
+  eventId: string,
+  userId: string | null,
+  eventType: string,
+  runId?: string
+) {
   return {
     org_id: orgId,
     event_id: eventId,
     event_type: eventType,
-    session_id: `sess-${orgId}`,
-    user_id: `user-${orgId}`,
-    run_id: runId ?? null,
-    occurred_at: new Date(),
-    payload: eventType === "run_completed" ? { status: "success", duration_ms: 1000, cost: 0.01, input_tokens: 100, output_tokens: 50 } : {},
-  };
-}
-
-function createEventWithUser(orgId: string, eventId: string, userId: string, eventType: string, runId?: string) {
-  return {
-    org_id: orgId,
-    event_id: eventId,
-    event_type: eventType,
-    session_id: `sess-${userId}`,
+    session_id: `sess-${userId ?? "anon"}`,
     user_id: userId,
     run_id: runId ?? null,
     occurred_at: new Date(),
-    payload: eventType === "run_completed" ? { status: "success", duration_ms: 1000, cost: 0.01, input_tokens: 100, output_tokens: 50 } : {},
+    payload: eventType === "run_completed"
+      ? { status: "success", duration_ms: 1000, cost: 0.01, input_tokens: 100, output_tokens: 50 }
+      : {},
   };
 }
 
-function createMockTxWithEvents(events: ReturnType<typeof createEvent>[]) {
-  let fetchCalled = false;
+function createMockTx() {
   return {
-    execute: vi.fn().mockImplementation((sql) => {
-      const sqlStr = sql?.strings?.join("") ?? sql?.raw ?? "";
-      // First call with SELECT * is fetch events
-      if (!fetchCalled && sqlStr.includes("SELECT *") && sqlStr.includes("event_id IN")) {
-        fetchCalled = true;
-        return Promise.resolve(events);
-      }
-      return Promise.resolve([]);
-    }),
+    execute: vi.fn().mockResolvedValue([]),
   };
 }
 
-function createMockTxWithSavepointTracking(events: ReturnType<typeof createEvent>[], savepointCalls: string[]) {
-  let fetchCalled = false;
+function createMockTxWithSavepointTracking(savepointCalls: string[]) {
   return {
     execute: vi.fn().mockImplementation((sql) => {
       const sqlStr = sql?.raw ?? sql?.strings?.join("") ?? "";
       if (sqlStr.includes("SAVEPOINT") || sqlStr.includes("RELEASE") || sqlStr.includes("ROLLBACK")) {
         savepointCalls.push(sqlStr);
       }
-      // First call with SELECT * is fetch events
-      if (!fetchCalled && sqlStr.includes("SELECT *") && sqlStr.includes("event_id IN")) {
-        fetchCalled = true;
-        return Promise.resolve(events);
+      return Promise.resolve([]);
+    }),
+  };
+}
+
+function createMockTxWithLockTracking(lockQueries: string[]) {
+  return {
+    execute: vi.fn().mockImplementation((sql) => {
+      const sqlStr = sql?.strings?.join("") ?? sql?.raw ?? "";
+      if (sqlStr.includes("FOR UPDATE") && !sqlStr.includes("SKIP LOCKED")) {
+        lockQueries.push(sqlStr);
       }
+      return Promise.resolve([]);
+    }),
+  };
+}
+
+function createMockTxWithQueryTracking(queries: string[]) {
+  return {
+    execute: vi.fn().mockImplementation((sql) => {
+      const sqlStr = sql?.strings?.join("") ?? sql?.raw ?? "";
+      queries.push(sqlStr);
       return Promise.resolve([]);
     }),
   };

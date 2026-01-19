@@ -151,6 +151,7 @@ export function TimelineEvent({
     case "message_created": {
       const msgPayload = payload as { content?: string; preview?: string } | undefined;
       const content = msgPayload?.preview || msgPayload?.content || "";
+      eventId = `event-${event.eventId}`;
       if (event.actorType === "user") {
         icon = <MessageSquare className="h-4 w-4" />;
         iconColor = "text-blue-500";

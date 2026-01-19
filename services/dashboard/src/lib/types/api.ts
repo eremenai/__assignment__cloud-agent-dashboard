@@ -60,6 +60,7 @@ export interface SessionFilters extends TimeRangeParams {
   costRange?: "any" | "<10" | "10-50" | "50-100" | ">100";
   hasHandoff?: "any" | "yes" | "no";
   hasPostHandoffIteration?: "any" | "yes" | "no";
+  userIds?: string[];
 }
 
 export interface UserFilters extends TimeRangeParams {

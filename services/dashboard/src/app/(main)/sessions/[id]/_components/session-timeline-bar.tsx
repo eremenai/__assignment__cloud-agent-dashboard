@@ -11,7 +11,7 @@ import { useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatCurrency, formatDuration, formatNumber, formatTime } from "@/lib/format";
-import type { LocalHandoffEvent, Run } from "@/lib/types/domain";
+import type { Event, LocalHandoffEvent, Run } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 interface SessionTimelineBarProps {
@@ -19,8 +19,10 @@ interface SessionTimelineBarProps {
   sessionEnd: Date;
   runs: Run[];
   handoffs: LocalHandoffEvent[];
+  events?: Event[];
   onRunClick?: (runId: string) => void;
   onHandoffClick?: (handoffId: string) => void;
+  onEventClick?: (eventId: string) => void;
 }
 
 interface TimelineSegment {
@@ -29,6 +31,15 @@ interface TimelineSegment {
   startMs: number;
   endMs: number;
   status?: "success" | "fail" | "timeout" | "cancelled";
+  label: string;
+  details: React.ReactNode;
+  clickTarget?: string;
+}
+
+interface TimelineMarker {
+  id: string;
+  type: "message" | "handoff";
+  positionMs: number;
   label: string;
   details: React.ReactNode;
   clickTarget?: string;
@@ -53,9 +64,86 @@ export function SessionTimelineBar({
   sessionEnd,
   runs,
   handoffs,
+  events = [],
   onRunClick,
   onHandoffClick,
+  onEventClick,
 }: SessionTimelineBarProps) {
+  // Create markers for messages and handoffs (displayed as dots/icons above the bar)
+  const markers = useMemo(() => {
+    const sessionStartMs = sessionStart.getTime();
+    const sessionEndMs = sessionEnd.getTime();
+    const totalDurationMs = sessionEndMs - sessionStartMs;
+
+    if (totalDurationMs <= 0) return [];
+
+    const allMarkers: (TimelineMarker & { positionPercent: number })[] = [];
+
+    // Add message events as markers
+    const messageEvents = events.filter(
+      (e) => e.type === "message_created" || e.eventType === "message_created"
+    );
+
+    messageEvents.forEach((event, index) => {
+      const eventMs = new Date(event.timestamp).getTime() - sessionStartMs;
+      const payload = event.payload as { content?: string; preview?: string } | undefined;
+      const preview = payload?.preview || payload?.content || "";
+      const truncatedPreview = preview.length > 100 ? preview.slice(0, 100) + "..." : preview;
+
+      allMarkers.push({
+        id: event.eventId,
+        type: "message",
+        positionMs: eventMs,
+        positionPercent: (eventMs / totalDurationMs) * 100,
+        label: `Message #${index + 1}`,
+        details: (
+          <div className="space-y-1">
+            <p className="text-xs">
+              <span className="text-muted-foreground">Time:</span> {formatTime(new Date(event.timestamp))}
+            </p>
+            {truncatedPreview && (
+              <p className="max-w-[200px] text-xs text-muted-foreground line-clamp-3">
+                {truncatedPreview}
+              </p>
+            )}
+            <p className="mt-2 text-muted-foreground text-xs">Click to scroll to event</p>
+          </div>
+        ),
+        clickTarget: `event-${event.eventId}`,
+      });
+    });
+
+    // Add handoff events as markers
+    handoffs.forEach((handoff, index) => {
+      const handoffMs = new Date(handoff.timestamp).getTime() - sessionStartMs;
+
+      allMarkers.push({
+        id: handoff.handoffId ?? handoff.eventId ?? `handoff-${index}`,
+        type: "handoff",
+        positionMs: handoffMs,
+        positionPercent: (handoffMs / totalDurationMs) * 100,
+        label: `Handoff #${index + 1}`,
+        details: (
+          <div className="space-y-1">
+            <p className="text-xs">
+              <span className="text-muted-foreground">Time:</span> {formatTime(new Date(handoff.timestamp))}
+            </p>
+            <p className="text-xs">
+              <span className="text-muted-foreground">Method:</span> {handoff.method}
+            </p>
+            <p className="mt-2 text-muted-foreground text-xs">Click to scroll to event</p>
+          </div>
+        ),
+        clickTarget: `event-handoff-${handoff.handoffId ?? handoff.eventId}`,
+      });
+    });
+
+    // Sort by position
+    allMarkers.sort((a, b) => a.positionMs - b.positionMs);
+
+    return allMarkers;
+  }, [sessionStart, sessionEnd, events, handoffs]);
+
   const segments = useMemo(() => {
     const sessionStartMs = sessionStart.getTime();
     const sessionEndMs = sessionEnd.getTime();
@@ -205,6 +293,31 @@ export function SessionTimelineBar({
     [onRunClick, onHandoffClick],
   );
 
+  const handleMarkerClick = useCallback(
+    (marker: TimelineMarker & { positionPercent: number }) => {
+      if (!marker.clickTarget) return;
+
+      // Try to find and scroll to the element
+      const element = document.getElementById(marker.clickTarget);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Highlight the element briefly
+        element.classList.add("ring-2", "ring-primary", "ring-offset-2");
+        setTimeout(() => {
+          element.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+        }, 2000);
+      }
+
+      // Call the callback if provided
+      if (onEventClick) {
+        onEventClick(marker.id);
+      } else if (marker.type === "handoff" && onHandoffClick) {
+        onHandoffClick(marker.id);
+      }
+    },
+    [onEventClick, onHandoffClick],
+  );
+
   if (segments.length === 0) {
     return null;
   }
@@ -227,9 +340,42 @@ export function SessionTimelineBar({
           </div>
         </div>
 
-        {/* Timeline bar */}
+        {/* Timeline bar with markers */}
         <div className="px-4 py-3">
           <TooltipProvider>
+            {/* Markers row (messages and handoffs) */}
+            {markers.length > 0 && (
+              <div className="relative mb-1 h-4">
+                {markers.map((marker) => (
+                  <Tooltip key={marker.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn(
+                          "absolute -translate-x-1/2 h-3 w-3 rounded-full border-2 transition-all hover:scale-125",
+                          marker.type === "message" && "border-blue-500 bg-blue-400",
+                          marker.type === "handoff" && "border-teal-500 bg-teal-400",
+                        )}
+                        style={{
+                          left: `${Math.max(1, Math.min(99, marker.positionPercent))}%`,
+                          top: "50%",
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        onClick={() => handleMarkerClick(marker)}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <div className="text-sm">
+                        <p className="mb-1 font-medium">{marker.label}</p>
+                        {marker.details}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            )}
+
+            {/* Main timeline bar */}
             <div className="relative h-10 overflow-hidden rounded-lg border border-border/50 bg-muted/50">
               {segments.map((segment, _index) => (
                 <Tooltip key={segment.id}>
@@ -298,7 +444,11 @@ export function SessionTimelineBar({
               <span>Timeout</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="h-2 w-2 rounded-sm bg-teal-500" />
+              <div className="h-2 w-2 rounded-full bg-blue-400" />
+              <span>Message</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-2 w-2 rounded-full bg-teal-400" />
               <span>Handoff</span>
             </div>
             <div className="flex items-center gap-1">

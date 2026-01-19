@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 import { fetchSessionsList } from "@/lib/data/sessions-data";
+import { fetchUsersForFilter, type UserOption } from "@/lib/data/users-data";
 import type { SessionFilters, SessionsListResponse, SortOrder } from "@/lib/types/api";
 
 import { SessionsFilters } from "./sessions-filters";
@@ -26,6 +27,7 @@ export function SessionsContent() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [response, setResponse] = useState<SessionsListResponse | null>(null);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const isFirstLoad = useRef(true);
 
   // Filter state
@@ -37,6 +39,22 @@ export function SessionsContent() {
 
   const orgId = currentOrgId ?? user?.orgId;
   const canViewAllSessions = can("view_org_sessions");
+
+  // Fetch users for filter dropdown (only if user can view all sessions)
+  useEffect(() => {
+    if (!orgId || !canViewAllSessions) {
+      setUsers([]);
+      return;
+    }
+
+    const timeRange = { from, to };
+    fetchUsersForFilter(orgId, timeRange)
+      .then(setUsers)
+      .catch((error) => {
+        console.error("Failed to fetch users for filter:", error);
+        setUsers([]);
+      });
+  }, [orgId, from, to, canViewAllSessions]);
 
   // Fetch sessions
   useEffect(() => {
@@ -66,6 +84,7 @@ export function SessionsContent() {
         costRange: filters.costRange,
         hasHandoff: filters.hasHandoff,
         hasPostHandoffIteration: filters.hasPostHandoffIteration,
+        userIds: filters.userIds,
       }
     )
       .then((sessionsData) => {
@@ -97,6 +116,11 @@ export function SessionsContent() {
 
   const handleSearchChange = useCallback((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
+    setPage(1);
+  }, []);
+
+  const handleUserIdsChange = useCallback((userIds: string[]) => {
+    setFilters((prev) => ({ ...prev, userIds }));
     setPage(1);
   }, []);
 
@@ -170,7 +194,10 @@ export function SessionsContent() {
         filters={filters}
         onFilterChange={handleFilterChange}
         onSearchChange={handleSearchChange}
+        onUserIdsChange={handleUserIdsChange}
         onClear={handleClearFilters}
+        users={users}
+        showUserFilter={canViewAllSessions}
       />
 
       {/* Summary */}

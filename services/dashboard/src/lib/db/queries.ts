@@ -249,6 +249,7 @@ export interface SessionsListOptions {
   costRange?: string;
   hasHandoff?: string;
   hasPostHandoffIteration?: string;
+  userIds?: string[];
 }
 
 export async function getSessionsListFromDb(
@@ -339,6 +340,12 @@ export async function getSessionsListFromDb(
     conditions.push(sql`${sessionStats.has_post_handoff_iteration} = true`);
   } else if (hasPostHandoffIteration === "no") {
     conditions.push(sql`${sessionStats.has_post_handoff_iteration} = false`);
+  }
+
+  // Add user IDs filter
+  const userIds = options?.userIds;
+  if (userIds && userIds.length > 0) {
+    conditions.push(sql`${sessionStats.user_id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
   }
 
   const whereClause = and(...conditions);
@@ -622,15 +629,19 @@ export async function getUsersListFromDb(
     .limit(limit)
     .offset(offset);
 
-  // Get user IDs to fetch lifespan data
+  // Get user IDs to fetch lifespan and active time data from session_stats
   const userIds = results.map((r) => r.userId);
 
-  // Get average lifespan per user from session_stats
-  const lifespanResults = userIds.length > 0
+  // Get lifespan and active time per user from session_stats (using consistent date filtering)
+  // This ensures both metrics use the same sessions, avoiding the issue where
+  // run durations (from user_stats_daily) can exceed lifespan (from session_stats)
+  const sessionMetricsResults = userIds.length > 0
     ? await db
         .select({
           userId: sessionStats.user_id,
           totalLifespanMs: sql<number>`SUM(EXTRACT(EPOCH FROM (${sessionStats.last_event_at} - ${sessionStats.first_message_at})) * 1000)`,
+          totalActiveTimeMs: sum(sessionStats.active_agent_time_ms),
+          sessionsCount: sql<number>`COUNT(*)`,
         })
         .from(sessionStats)
         .where(
@@ -644,24 +655,38 @@ export async function getUsersListFromDb(
         .groupBy(sessionStats.user_id)
     : [];
 
-  const lifespanMap = new Map(lifespanResults.map((r) => [r.userId, Number(r.totalLifespanMs ?? 0)]));
+  const sessionMetricsMap = new Map(sessionMetricsResults.map((r) => [
+    r.userId,
+    {
+      lifespan: Number(r.totalLifespanMs ?? 0),
+      activeTime: Number(r.totalActiveTimeMs ?? 0),
+      sessions: Number(r.sessionsCount ?? 0),
+    }
+  ]));
 
-  const usersList: UserListItem[] = results.map((row) => ({
-    userId: row.userId,
-    email: row.email,
-    displayName: row.displayName,
-    sessionsCount: Number(row.sessionsCount ?? 0),
-    runsCount: Number(row.runsCount ?? 0),
-    successRuns: Number(row.successRuns ?? 0),
-    failedRuns: Number(row.failedRuns ?? 0),
-    totalCost: Number(row.totalCost ?? 0),
-    totalDurationMs: Number(row.totalDurationMs ?? 0),
-    totalLifespanMs: lifespanMap.get(row.userId) ?? 0,
-    sessionsWithHandoff: Number(row.sessionsWithHandoff ?? 0),
-    sessionsWithPostHandoff: Number(row.sessionsWithPostHandoff ?? 0),
-    totalInputTokens: Number(row.totalInputTokens ?? 0),
-    totalOutputTokens: Number(row.totalOutputTokens ?? 0),
-  }));
+  const usersList: UserListItem[] = results.map((row) => {
+    // Use session_stats metrics for active time, lifespan, and session count to ensure consistency
+    // This avoids issues where user_stats_daily session counts don't match session_stats
+    const sessionMetrics = sessionMetricsMap.get(row.userId);
+    return {
+      userId: row.userId,
+      email: row.email,
+      displayName: row.displayName,
+      // Use session count from session_stats for consistency with lifespan/active time calculations
+      sessionsCount: sessionMetrics?.sessions ?? Number(row.sessionsCount ?? 0),
+      runsCount: Number(row.runsCount ?? 0),
+      successRuns: Number(row.successRuns ?? 0),
+      failedRuns: Number(row.failedRuns ?? 0),
+      totalCost: Number(row.totalCost ?? 0),
+      // Use active time from session_stats to match lifespan date filtering
+      totalDurationMs: sessionMetrics?.activeTime ?? 0,
+      totalLifespanMs: sessionMetrics?.lifespan ?? 0,
+      sessionsWithHandoff: Number(row.sessionsWithHandoff ?? 0),
+      sessionsWithPostHandoff: Number(row.sessionsWithPostHandoff ?? 0),
+      totalInputTokens: Number(row.totalInputTokens ?? 0),
+      totalOutputTokens: Number(row.totalOutputTokens ?? 0),
+    };
+  });
 
   // Get total distinct users (for pagination)
   const countResult = await db

@@ -27,6 +27,7 @@ export interface SessionsListFilters {
   costRange?: string;
   hasHandoff?: string;
   hasPostHandoffIteration?: string;
+  userIds?: string[];
 }
 
 /**
@@ -52,6 +53,7 @@ export async function fetchSessionsList(
     costRange: filters?.costRange,
     hasHandoff: filters?.hasHandoff,
     hasPostHandoffIteration: filters?.hasPostHandoffIteration,
+    userIds: filters?.userIds,
   };
 
   const result = await getSessionsListFromDb(orgId, fromDate, toDate, pagination.pageSize, offset, options);

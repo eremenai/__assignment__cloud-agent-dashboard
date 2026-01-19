@@ -179,6 +179,7 @@ export function SessionContent({ sessionId }: SessionContentProps) {
         sessionEnd={session.session.lastMessageAt}
         runs={session.runs}
         handoffs={session.handoffs}
+        events={session.events}
       />
 
       {/* Tabs */}

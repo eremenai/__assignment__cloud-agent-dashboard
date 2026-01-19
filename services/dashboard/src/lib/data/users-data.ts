@@ -24,6 +24,36 @@ export interface UsersListFilters {
 }
 
 /**
+ * Simple user info for dropdown filters.
+ */
+export interface UserOption {
+  userId: string;
+  name: string;
+  email: string;
+}
+
+/**
+ * Get simple list of users for dropdown filters.
+ * Returns users with sessions in the given time range.
+ */
+export async function fetchUsersForFilter(
+  orgId: string,
+  timeRange: TimeRangeParams
+): Promise<UserOption[]> {
+  const fromDate = new Date(timeRange.from);
+  const toDate = new Date(timeRange.to);
+
+  // Fetch all users with activity in the time range
+  const result = await getUsersListFromDb(orgId, fromDate, toDate, 1000, 0);
+
+  return result.users.map((u) => ({
+    userId: u.userId,
+    name: u.displayName ?? u.email ?? u.userId,
+    email: u.email ?? "",
+  }));
+}
+
+/**
  * Get paginated users list.
  */
 export async function fetchUsersList(
