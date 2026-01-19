@@ -35,7 +35,7 @@ Org-level analytics dashboard for cloud coding agent execution. Tracks adoption,
 | Service | Port | Type | Purpose |
 |---------|------|------|---------|
 | **ingest** | 3001 | Prod | Receives events from upstream internal systems (drop-copy pattern). Validates, deduplicates, queues for processing. Isolated from client traffic. |
-| **worker** | - | Prod | Async event processor. Polls queue, computes aggregates into read models. Horizontally scalable - add more workers for throughput. |
+| **worker** | - | Prod | Async event processor. Polls queue, computes aggregates into read models. Currently slow due to lock contention on daily aggregates (see Architecture Decisions). |
 | **dashboard** | 3000 | Prod | Client-facing Next.js app. Read-only access to pre-computed data. Serves org admins and managers. |
 | **db** | 5432 | Prod | PostgreSQL. Append-only event log + materialized read models. Single instance for V1. |
 | **mock-auth** | 3002 | Dev | Fake JWT issuer for local development. Replace with real IdP in production. |
@@ -94,6 +94,7 @@ Cloud coding agents run tasks remotely (implement changes, run tests, push branc
 | **P95 computed at query time** | Percentiles can't be pre-aggregated accurately. Acceptable for V1; add histogram buckets if slow. |
 | **Polling worker (no message queue)** | Simpler than Kafka/RabbitMQ. Postgres `FOR UPDATE SKIP LOCKED` for distributed locking. Good enough for V1 scale. |
 | **Per-user transaction batching** | Worker groups events by user to reduce lock contention on session/user stats. Org-level stats still a hotkey. |
+| **Worker aggregation split (planned)** | Currently slow: worker updates all aggregates synchronously. Future: split into (1) event worker for runs + sessions, (2) periodic aggregation worker for org_stats_daily/user_stats_daily. Partitionable by org, independent, much faster. |
 
 ### Production Gaps (🔴 Critical / 🟠 High)
 

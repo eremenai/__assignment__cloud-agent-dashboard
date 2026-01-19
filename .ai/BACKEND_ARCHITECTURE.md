@@ -285,6 +285,16 @@ The naive approach (single transaction for claim+process) has a flaw: if process
 - `processed_at` only set on success
 - Failed events re-claimed on next poll (with `attempts` already incremented)
 
+### Worker Performance Note
+
+**Current limitation:** The worker is slow due to lock contention on `org_stats_daily` and `user_stats_daily` tables. All events for the same org/day compete for the same rows.
+
+**Planned improvement:** Split into two workers:
+1. **Event Worker** - processes events, updates `run_facts` and `session_stats` only (fast, partitionable)
+2. **Aggregation Worker** - runs periodically (e.g., every 1-5 min), recalculates `org_stats_daily` and `user_stats_daily` from source tables (independent, parallelizable by org)
+
+See `TRADEOFFS_FUTURE_STEPS.md` item #5 for details.
+
 **Dashboard App (`:3000` - client-facing)**
 - Next.js with App Router
 - Reads from `session_stats`, `run_facts`, `events_raw`

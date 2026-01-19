@@ -79,20 +79,40 @@ This document captures all tradeoffs made across the system (frontend + backend)
 
 ## 🟠 High (Address for Scale/Reliability)
 
-### 5. org_stats_daily is a Hotkey (Lock Contention)
+### 5. Worker is Slow (Lock Contention on Daily Aggregates)
 
-**Current state:** The worker processes events grouped by user, with each user's events in a separate transaction. However, `org_stats_daily` is still locked per transaction since all users in an org update the same daily row.
+**Current state:** The worker processes events grouped by user, with each user's events in a separate transaction. However, `org_stats_daily` and `user_stats_daily` are updated synchronously during event processing, causing lock contention when multiple events for the same org/day are processed.
 
-**Risk:** High contention on `org_stats_daily` when many users in the same org have concurrent events. Workers wait for each other when processing events from the same org on the same day.
+**Risk:** High contention on daily aggregate tables. Workers wait for each other when processing events from the same org on the same day. This makes the worker slow and limits throughput.
 
-**Future optimization options:**
-- **Buffer in memory**: Accumulate org stats updates in memory, flush periodically (every N seconds or M events)
-- **Advisory locks with retry**: Use Postgres advisory locks instead of row locks, retry on conflict
-- **Partition by hour**: Use `org_stats_hourly` instead of daily, aggregate to daily in a separate job
-- **Separate aggregation job**: Remove org stats updates from event projection entirely; run a periodic job that recalculates org stats from user stats (`SELECT SUM(*) FROM user_stats_daily GROUP BY org_id, day`)
-- **Optimistic concurrency**: Use version column with retry on conflict
+**Planned architecture (split worker):**
 
-**Recommended approach:** Separate aggregation job is cleanest - derive org stats from user stats periodically. This eliminates the hotkey entirely and makes projections user-scoped.
+1. **Event Worker** (fast path):
+   - Processes events from queue
+   - Updates only `run_facts` and `session_stats`
+   - No daily aggregate updates
+   - Horizontally scalable, partitionable by user/org
+   - Target: sub-second processing per event
+
+2. **Aggregation Worker** (periodic job):
+   - Runs on schedule (e.g., every 1-5 minutes)
+   - Recalculates `org_stats_daily` from `session_stats` and `run_facts`
+   - Recalculates `user_stats_daily` from `session_stats` and `run_facts`
+   - Can be partitioned by org for parallelism
+   - Independent of event processing - no lock contention
+
+**Benefits:**
+- Event processing becomes fast (no aggregate contention)
+- Aggregation is independent and parallelizable
+- Daily aggregates slightly delayed (minutes, not seconds) - acceptable for analytics
+- Can scale event workers and aggregation workers independently
+
+**Alternative considered:**
+- Buffer in memory and flush periodically
+- Advisory locks with retry
+- Partition by hour instead of day
+
+**Recommended approach:** Split worker architecture as described above.
 
 **Effort:** Medium (1-2 days)
 
